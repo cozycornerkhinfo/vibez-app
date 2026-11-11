@@ -182,7 +182,7 @@ function App() {
           </div>
           <div className="category-row">
             <div className="category-scroll">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={category === item ? 'category-chip selected' : 'category-chip'}>{item}</button>)}</div>
-            <span className="results-count">{visible.length} THINGS TO DO</span>
+            <div className="category-actions"><span className="results-count">{visible.length} THINGS TO DO</span><button type="button" className="show-everything-btn" onClick={() => { setActiveTab('Discover'); setCategory('All vibes'); setSearch(''); }}>Show everything ↗</button></div>
           </div>
           <div className="event-grid">
             {visible.map((item) => (
@@ -197,7 +197,7 @@ function App() {
               </article>
             ))}
           </div>
-          {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>{eventsLoading ? 'Finding your next vibe…' : activeTab === 'Saved' ? 'No saved events yet.' : 'No upcoming approved events yet.'}</h3><p>{eventsLoading ? 'Loading approved events from Phnom Penh.' : activeTab === 'Saved' ? 'Save an event and it will appear here.' : 'Check back soon. New events will appear here after VIBEZ approval.'}</p>{!eventsLoading && <button onClick={() => { setCategory('All vibes'); setSearch(''); if(activeTab === 'Saved') setActiveTab('Discover'); }}>Show everything</button>}</div>}
+          {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>{eventsLoading ? 'Finding your next vibe…' : activeTab === 'Saved' ? 'No saved events yet.' : 'No upcoming approved events yet.'}</h3><p>{eventsLoading ? 'Loading approved events from Phnom Penh.' : activeTab === 'Saved' ? 'Save an event and it will appear here.' : 'Check back soon. New events will appear here after VIBEZ approval.'}</p></div>}
           {eventsError && <div className="demo-note">{eventsError}. Please refresh to try again.</div>}
         </section>
 
