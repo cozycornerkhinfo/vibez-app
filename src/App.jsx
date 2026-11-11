@@ -1,19 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X } from 'lucide-react';
 
-const activities = [
-  { id: 1, title: 'Weekend Market Walk', type: 'Markets', day: 'SAT, NOV 14', time: '9:00 AM', place: 'Central Market area', price: 'Free', tag: 'Local favourite', color: 'market', emoji: '🧺', description: 'Browse local finds, street food and independent makers.' },
-  { id: 2, title: 'Rooftop Sunset Sessions', type: 'Music', day: 'FRI, NOV 13', time: '5:30 PM', place: 'BKK1', price: '$5+', tag: 'Tonight’s plan', color: 'music', emoji: '🎶', description: 'Good music, golden hour and a relaxed city crowd.' },
-  { id: 3, title: 'Creative Coffee Meetup', type: 'Community', day: 'SUN, NOV 15', time: '10:00 AM', place: 'Toul Tom Poung', price: 'Buy a drink', tag: 'Meet people', color: 'coffee', emoji: '☕', description: 'A casual meet-up for makers, freelancers and curious minds.' },
-  { id: 4, title: 'Open-Air Movie Night', type: 'Arts', day: 'SAT, NOV 14', time: '7:00 PM', place: 'Koh Pich', price: '$3', tag: 'Under the stars', color: 'movie', emoji: '🎬', description: 'Bring a friend and enjoy a film under the night sky.' },
-  { id: 5, title: 'Sunday Social Run', type: 'Fitness', day: 'SUN, NOV 15', time: '6:30 AM', place: 'Riverside', price: 'Free', tag: 'Move together', color: 'run', emoji: '🏃', description: 'An easy-paced community run, open to all levels.' },
-  { id: 6, title: 'Indie Makers Pop-up', type: 'Markets', day: 'SUN, NOV 15', time: '11:00 AM', place: 'Street  street  308', price: 'Free entry', tag: 'Discover local', color: 'makers', emoji: '🎨', description: 'Meet independent creators and discover something new.' }
-];
-
 const categories = ['All vibes', 'Music', 'Markets', 'Food & Drink', 'Arts', 'Fitness', 'Community'];
 
 function App() {
   const [telegramUser, setTelegramUser] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+  const [eventsError, setEventsError] = useState('');
   const [telegramInitData, setTelegramInitData] = useState('');
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventImage, setEventImage] = useState(null);
@@ -44,6 +38,42 @@ function App() {
   const [saved, setSaved] = useState([]);
   const [activeTab, setActiveTab] = useState('Discover');
   const [mobileMenu, setMobileMenu] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-public-events')
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load events');
+        const items = (result.events || []).map((event) => {
+          const date = new Date(`${event.event_date}T12:00:00`);
+          const time = new Date(`1970-01-01T${event.start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          const colors = { Music: 'music', Markets: 'market', 'Food & Drink': 'coffee', Arts: 'movie', Fitness: 'run', Community: 'makers', Other: 'market' };
+          const emojis = { Music: '🎶', Markets: '🧺', 'Food & Drink': '☕', Arts: '🎨', Fitness: '🏃', Community: '✳', Other: '📍' };
+          return {
+            id: event.id,
+            title: event.title,
+            type: event.category,
+            day: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase(),
+            time,
+            place: event.location,
+            price: event.price || 'See details',
+            tag: 'VIBEZ approved',
+            color: colors[event.category] || 'market',
+            emoji: emojis[event.category] || '✳',
+            description: event.description,
+          };
+        });
+        if (!cancelled) setActivities(items);
+      })
+      .catch((error) => {
+        if (!cancelled) setEventsError(error.message || 'Could not load events');
+      })
+      .finally(() => {
+        if (!cancelled) setEventsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = useMemo(() => activities.filter((item) => {
     const matchesCategory = category === 'All vibes' || item.type === category || (category === 'Food & Drink' && item.type === 'Community');
@@ -160,8 +190,8 @@ function App() {
               </article>
             ))}
           </div>
-          {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>No vibes found. Yet.</h3><p>Try another category or search term.</p><button onClick={() => { setCategory('All vibes'); setSearch(''); if(activeTab === 'Saved') setActiveTab('Discover'); }}>Show everything</button></div>}
-          <div className="demo-note">PREVIEW CONTENT · Sample activities shown for design testing. Real event listings will be connected next.</div>
+          {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>{eventsLoading ? 'Finding your next vibe…' : activeTab === 'Saved' ? 'No saved events yet.' : 'No upcoming approved events yet.'}</h3><p>{eventsLoading ? 'Loading approved events from Phnom Penh.' : activeTab === 'Saved' ? 'Save an event and it will appear here.' : 'Check back soon. New events will appear here after VIBEZ approval.'}</p>{!eventsLoading && <button onClick={() => { setCategory('All vibes'); setSearch(''); if(activeTab === 'Saved') setActiveTab('Discover'); }}>Show everything</button>}</div>}
+          {eventsError && <div className="demo-note">{eventsError}. Please refresh to try again.</div>}
         </section>
 
         <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event, a hidden spot or a community worth finding? Help make the city more discoverable.</p></div><button onClick={openEventForm}>Share a discovery <ArrowUpRight size={17} /></button><span className="banner-star">✳</span></section>
