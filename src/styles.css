@@ -29,3 +29,9 @@
 .event-success h3{font:700 25px 'Space Grotesk';margin:15px 0 8px}
 .event-success p{font-size:13px;line-height:1.6;color:#697467;max-width:400px;margin:0 auto 20px}
 @media(max-width:600px){.event-modal{padding:21px 17px;max-height:96vh}.event-modal-heading h2{font-size:29px}.event-form-row{grid-template-columns:1fr;gap:13px}}
+
+
+/* Keep the complete event poster visible, regardless of its original aspect ratio. */
+.event-visual:has(.event-cover-img):before,.event-visual:has(.event-cover-img):after{display:none}
+.event-visual .event-cover-img{object-fit:contain;background:#f1f2ee}
+.event-visual .visual-index{z-index:2}
