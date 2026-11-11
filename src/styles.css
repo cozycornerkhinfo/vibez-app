@@ -56,3 +56,5 @@
   .category-chip{flex:0 0 auto;scroll-snap-align:start;touch-action:pan-x}
   .category-actions{width:100%;justify-content:space-between}
 }
+
+.event-time{justify-content:space-between}.event-time>span{display:flex;align-items:center;gap:6px}.go-btn{display:inline-flex;align-items:center;gap:5px;border:0;border-radius:5px;background:#17251d;color:#fff;padding:7px 11px;font-size:10px;font-weight:700;cursor:pointer}.go-btn:hover{background:#4bb965;color:#17251d}
