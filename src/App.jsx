@@ -81,7 +81,7 @@ function App() {
     const matchesCategory = category === 'All vibes' || item.type === category || (category === 'Food & Drink' && item.type === 'Community');
     const haystack = [item.title, item.type, item.place, item.description].join(' ').toLowerCase();
     return matchesCategory && haystack.includes(search.toLowerCase());
-  }), [category, search]);
+  }), [activities, category, search]);
 
   const openEventForm = () => { setEventError(''); setEventSuccess(''); setShowEventForm(true); };
   const submitEvent = async (e) => {
