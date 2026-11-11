@@ -11,6 +11,7 @@ function App() {
   const [telegramInitData, setTelegramInitData] = useState('');
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventImage, setEventImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
@@ -127,6 +128,10 @@ function App() {
         </div>
       </header>
 
+      {selectedImage && <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="Full-screen event poster" onClick={() => setSelectedImage(null)}>
+        <button type="button" className="image-lightbox-close" onClick={() => setSelectedImage(null)} aria-label="Close image">×</button>
+        <img src={selectedImage.src} alt={selectedImage.alt} onClick={(e) => e.stopPropagation()} />
+      </div>}
       {showEventForm && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEventForm(false); }}>
         <section className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-form-title">
           <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY SUBMISSION</div><h2 id="event-form-title">Share an event.</h2><p>Tell Phnom Penh what’s happening.</p></div><button type="button" className="event-modal-close" onClick={() => setShowEventForm(false)} aria-label="Close">×</button></div>
@@ -183,7 +188,7 @@ function App() {
             {visible.map((item) => (
               <article className="event-card" key={item.id}>
                 <div className={'event-visual ' + item.color}>
-                  {item.coverImageUrl && <img className="event-cover-img" src={item.coverImageUrl} alt={item.title + ' cover'} />}
+                  {item.coverImageUrl && <button type="button" className="event-image-open" onClick={() => setSelectedImage({ src: item.coverImageUrl, alt: item.title + ' poster' })} aria-label={"View full poster for " + item.title}><img className="event-cover-img" src={item.coverImageUrl} alt="" /></button>}
                   <span className="event-tag">{item.tag}</span>{!item.coverImageUrl && <span className="event-emoji">{item.emoji}</span>}
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
