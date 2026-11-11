@@ -103,6 +103,13 @@ function App() {
     finally { setEventSubmitting(false); }
   };
 
+  const openMap = (place) => {
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+    const webApp = window.Telegram?.WebApp;
+    if (webApp?.openLink) webApp.openLink(url);
+    else window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const toggleSave = (id) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const visible = activeTab === 'Saved' ? filtered.filter((item) => saved.includes(item.id)) : filtered;
 
@@ -193,7 +200,7 @@ function App() {
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
                 </div>
-                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><CalendarDays size={14} /> {item.time}</div></div>
+                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place)}>Go <ArrowUpRight size={14} /></button></div></div>
               </article>
             ))}
           </div>
