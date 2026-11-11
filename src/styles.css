@@ -43,3 +43,16 @@
 .image-lightbox{position:fixed;inset:0;z-index:100;background:rgba(10,14,12,.96);display:flex;align-items:center;justify-content:center;padding:24px}
 .image-lightbox>img{display:block;max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
 .image-lightbox-close{position:absolute;top:calc(16px + env(safe-area-inset-top));right:18px;z-index:2;width:42px;height:42px;border:1px solid #ffffff55;border-radius:50%;background:#ffffff18;color:white;font-size:29px;line-height:1;cursor:pointer}
+
+
+/* Make the category rail swipeable and keep the all-events action visible. */
+.category-scroll{min-width:0;flex:1;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+.category-actions{display:flex;align-items:center;gap:14px;flex-shrink:0}
+.show-everything-btn{border:1px solid #dce5d5;background:#e9f5df;color:#263529;border-radius:30px;padding:9px 13px;white-space:nowrap;font-size:10px;font-weight:800}
+.show-everything-btn:active{transform:scale(.97)}
+@media(max-width:760px){
+  .category-row{width:100%;min-width:0;gap:13px}
+  .category-scroll{width:100%;min-width:0;flex:0 1 auto;padding-bottom:4px;scroll-snap-type:x proximity}
+  .category-chip{flex:0 0 auto;scroll-snap-align:start;touch-action:pan-x}
+  .category-actions{width:100%;justify-content:space-between}
+}
