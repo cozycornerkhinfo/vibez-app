@@ -62,6 +62,7 @@ function App() {
             color: colors[event.category] || 'market',
             emoji: emojis[event.category] || '✳',
             description: event.description,
+            coverImageUrl: event.cover_image_url || null,
           };
         });
         if (!cancelled) setActivities(items);
@@ -182,7 +183,8 @@ function App() {
             {visible.map((item) => (
               <article className="event-card" key={item.id}>
                 <div className={'event-visual ' + item.color}>
-                  <span className="event-tag">{item.tag}</span><span className="event-emoji">{item.emoji}</span>
+                  {item.coverImageUrl && <img className="event-cover-img" src={item.coverImageUrl} alt={item.title + ' cover'} />}
+                  <span className="event-tag">{item.tag}</span>{!item.coverImageUrl && <span className="event-emoji">{item.emoji}</span>}
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
                 </div>
