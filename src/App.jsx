@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X } from 'lucide-react';
 
 const activities = [
@@ -13,6 +13,24 @@ const activities = [
 const categories = ['All vibes', 'Music', 'Markets', 'Food & Drink', 'Arts', 'Fitness', 'Community'];
 
 function App() {
+  const [telegramUser, setTelegramUser] = useState(null);
+  const [telegramStatus, setTelegramStatus] = useState('connecting');
+  useEffect(() => {
+    const webApp = window.Telegram?.WebApp;
+    if (!webApp?.initData) { setTelegramStatus('not-telegram'); return; }
+    webApp.ready();
+    webApp.expand();
+    fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ initData: webApp.initData })
+    }).then(async (response) => {
+      const result = await response.json();
+      if (!response.ok || !result.ok) throw new Error(result.error || 'Verification failed');
+      setTelegramUser(result.user);
+      setTelegramStatus('connected');
+    }).catch(() => setTelegramStatus('error'));
+  }, []);
   const [category, setCategory] = useState('All vibes');
   const [search, setSearch] = useState('');
   const [saved, setSaved] = useState([]);
@@ -42,6 +60,8 @@ function App() {
           ))}
         </nav>
         <div className="top-actions">
+          {telegramStatus === 'connected' && telegramUser && <span className="telegram-user">👤 {telegramUser.first_name}{telegramUser.username ? ' @' + telegramUser.username : ''}</span>}
+          {telegramStatus === 'error' && <span className="telegram-user telegram-error">Account verification failed</span>}
           <span className="city-pill"><MapPin size={14} /> Phnom Penh <span className="chevron">⌄</span></span>
           <button className="submit-btn" onClick={() => alert('Community submissions are coming soon!')}>＋ <span>Submit an event</span></button>
           <button className="menu-btn" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Toggle menu">{mobileMenu ? <X /> : <Menu />}</button>
