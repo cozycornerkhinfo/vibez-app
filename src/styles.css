@@ -200,3 +200,12 @@ footer{border-color:#ffffff1c;color:#8f9b90}
 .event-upcoming-indicator{display:inline-flex;align-items:center;border-radius:20px;padding:3px 7px;font-size:8px;letter-spacing:.7px;white-space:nowrap}
 .event-live-indicator{background:#b8ff55;color:#111713}
 .event-upcoming-indicator{background:#ffffff16;color:#d4ddd3}
+
+
+/* Prominent Happening Soon section */
+.happening-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:30px 0 18px;padding:18px 20px;border:1px solid rgba(184,255,85,.24);border-radius:18px;background:linear-gradient(110deg,rgba(184,255,85,.10),rgba(120,85,245,.08))}
+.happening-heading h3{margin:5px 0 4px;color:#f5f3ea;font-size:clamp(22px,3vw,30px);letter-spacing:-.8px}
+.happening-heading p{margin:0;color:rgba(245,243,234,.68);font-size:13px;line-height:1.5}
+.happening-heading .eyebrow{color:#b8ff55}
+.happening-count{flex-shrink:0;padding:7px 10px;border-radius:20px;background:#b8ff55;color:#111713;font-size:10px;font-weight:800;letter-spacing:.8px}
+@media(max-width:600px){.happening-heading{align-items:flex-start;padding:15px;gap:10px}.happening-heading p{max-width:260px}.happening-count{font-size:9px;padding:6px 8px}}
