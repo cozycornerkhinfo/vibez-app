@@ -40,6 +40,12 @@ function App() {
   const [saved, setSaved] = useState([]);
   const [activeTab, setActiveTab] = useState('Discover');
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [clockNow, setClockNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,6 +72,14 @@ function App() {
             emoji: emojis[event.category] || '✳',
             description: event.description,
             endTime: event.end_time || '',
+            startsAt: new Date(event.event_date + 'T' + (event.start_time || '00:00').slice(0, 5) + ':00+07:00').getTime(),
+            endsAt: (() => {
+              const start = new Date(event.event_date + 'T' + (event.start_time || '00:00').slice(0, 5) + ':00+07:00').getTime();
+              if (!event.end_time) return new Date(event.event_date + 'T23:59:59+07:00').getTime();
+              let end = new Date(event.event_date + 'T' + event.end_time.slice(0, 5) + ':00+07:00').getTime();
+              if (end <= start) end += 24 * 60 * 60 * 1000;
+              return end;
+            })(),
             organizerName: event.organizer_name || '',
             organizerContact: event.organizer_contact || '',
             coverImageUrl: event.cover_image_url || null,
@@ -82,11 +96,18 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
-  const filtered = useMemo(() => activities.filter((item) => {
-    const matchesCategory = category === 'All vibes' || item.type === category || (category === 'Food & Drink' && item.type === 'Community');
-    const haystack = [item.title, item.type, item.place, item.description].join(' ').toLowerCase();
-    return matchesCategory && haystack.includes(search.toLowerCase());
-  }), [activities, category, search]);
+  const filtered = useMemo(() => activities
+    .filter((item) => {
+      const matchesCategory = category === 'All vibes' || item.type === category || (category === 'Food & Drink' && item.type === 'Community');
+      const haystack = [item.title, item.type, item.place, item.description].join(' ').toLowerCase();
+      return matchesCategory && haystack.includes(search.toLowerCase()) && item.endsAt > clockNow;
+    })
+    .sort((a, b) => {
+      const aLive = a.startsAt <= clockNow && clockNow < a.endsAt;
+      const bLive = b.startsAt <= clockNow && clockNow < b.endsAt;
+      if (aLive !== bLive) return aLive ? -1 : 1;
+      return a.startsAt - b.startsAt;
+    }), [activities, category, search, clockNow]);
 
   const openEventForm = () => { setEventError(''); setEventSuccess(''); setShowEventForm(true); };
   const submitEvent = async (e) => {
@@ -242,7 +263,7 @@ function App() {
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
                 </div>
-                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place, item.mapUrl)}>Go <ArrowUpRight size={14} /></button></div><button type="button" className="event-details-btn" onClick={() => setSelectedEvent(item)}>View event details <ArrowUpRight size={14} /></button></div>
+                <div className="event-info"><div className="event-type">{item.startsAt <= clockNow && clockNow < item.endsAt ? <><span className="event-live-indicator">HAPPENING NOW</span> <span>•</span> </> : <><span className="event-upcoming-indicator">UPCOMING</span> <span>•</span> </>}{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place, item.mapUrl)}>Go <ArrowUpRight size={14} /></button></div><button type="button" className="event-details-btn" onClick={() => setSelectedEvent(item)}>View event details <ArrowUpRight size={14} /></button></div>
               </article>
             ))}
           </div>
