@@ -123,7 +123,8 @@ function App() {
             })(),
             organizerName: event.organizer_name || '',
             organizerContact: event.organizer_contact || '',
-            coverImageUrl: event.cover_image_url || null,\n            voucher: event.voucher || null,
+            coverImageUrl: event.cover_image_url || null,
+            voucher: event.voucher || null,
           };
         });
         if (!cancelled) setActivities(items);
