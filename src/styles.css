@@ -193,3 +193,10 @@ footer{border-color:#ffffff1c;color:#8f9b90}
 .event-contact-text{overflow-wrap:anywhere;color:#b8c2b8}
 .telegram-contact-btn{justify-self:start;border:0;border-radius:24px;background:#229ed9;color:white;padding:10px 15px;font-size:12px;font-weight:800;cursor:pointer}
 .event-details-backdrop{z-index:35}
+
+
+/* Live and upcoming event labels */
+.event-live-indicator,
+.event-upcoming-indicator{display:inline-flex;align-items:center;border-radius:20px;padding:3px 7px;font-size:8px;letter-spacing:.7px;white-space:nowrap}
+.event-live-indicator{background:#b8ff55;color:#111713}
+.event-upcoming-indicator{background:#ffffff16;color:#d4ddd3}
