@@ -127,9 +127,9 @@ function App() {
     const value = (contact || '').trim();
     if (!value) return '';
     const linkMatch = value.match(/t\.me\/([A-Za-z0-9_]{5,32})/i);
-    if (linkMatch) return \`https://t.me/\${linkMatch[1]}\`;
+    if (linkMatch) return 'https://t.me/' + linkMatch[1];
     const username = value.replace(/^@/, '');
-    return /^[A-Za-z0-9_]{5,32}$/.test(username) ? \`https://t.me/\${username}\` : '';
+    return /^[A-Za-z0-9_]{5,32}$/.test(username) ? 'https://t.me/' + username : '';
   };
 
   const openTelegramContact = (contact) => {
