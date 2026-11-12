@@ -352,13 +352,29 @@ function App() {
 
         <section className="discover-section" id="discover">
           <div className="section-heading">
-            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> THE GOOD STUFF</div><h2>{activeTab === 'Saved' ? 'Your saved vibes.' : 'Make today interesting.'}</h2><p>Plans worth leaving the house for.</p></div>
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> THE GOOD STUFF</div><h2>{activeTab === 'Saved' ? 'Your saved vibes.' : activeTab === 'My Vouchers' ? 'Your claimed vouchers.' : 'Make today interesting.'}</h2><p>{activeTab === 'My Vouchers' ? 'Your personal event rewards, all in one place.' : 'Plans worth leaving the house for.'}</p></div>
             <button className="filter-btn" onClick={() => { setCategory('All vibes'); setSearch(''); }}><SlidersHorizontal size={16} /> Reset filters</button>
           </div>
           <div className="category-row">
             <div className="category-scroll">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={category === item ? 'category-chip selected' : 'category-chip'}>{item}</button>)}</div>
             <div className="category-actions"><span className="results-count">{visible.length} THINGS TO DO</span><button type="button" className="show-everything-btn" onClick={() => { setActiveTab('Discover'); setCategory('All vibes'); setSearch(''); }}>Show everything ↗</button></div>
           </div>
+          {activeTab === 'My Vouchers' ? <div className="my-vouchers-panel">
+            {vouchersLoading && <p className="voucher-empty">Loading your vouchers…</p>}
+            {!vouchersLoading && myVouchers.length === 0 && <div className="voucher-empty"><h3>No vouchers claimed yet.</h3><p>Explore events with voucher offers and claim your first reward.</p><button type="button" onClick={() => setActiveTab('Discover')}>Explore events</button></div>}
+            <div className="my-voucher-grid">
+              {myVouchers.map((voucher) => <article className="my-voucher-card" key={voucher.id}>
+                <div className="eyebrow dark">VIBEZ REWARD · {voucher.city}</div>
+                <h3>{voucher.voucher_title}</h3>
+                <strong>{voucher.benefit}</strong>
+                <p>{voucher.event_title}</p>
+                <div className="my-voucher-code"><span>{voucher.code}</span><button type="button" onClick={() => copyVoucherCode(voucher.code)}>Copy</button></div>
+                <div className="my-voucher-foot"><span>{voucher.redeemed_at ? 'REDEEMED' : 'NOT REDEEMED'}</span><span>{voucher.expires_at ? 'Expires ' + new Date(voucher.expires_at).toLocaleDateString() : 'No expiry'}</span></div>
+                {voucher.instructions && <small>{voucher.instructions}</small>}
+              </article>)}
+            </div>
+            {(voucherMessage || voucherError) && <p className={voucherError ? 'voucher-feedback error' : 'voucher-feedback'}>{voucherError || voucherMessage}</p>}
+          </div> : <>
           <div className="happening-heading">
             <div>
               <div className="eyebrow dark"><span className="eyebrow-dot" /> LIVE CITY GUIDE</div>
@@ -372,7 +388,7 @@ function App() {
               <article className="event-card" key={item.id}>
                 <div className={'event-visual ' + item.color}>
                   {item.coverImageUrl && <button type="button" className="event-image-open" onClick={() => setSelectedImage({ src: item.coverImageUrl, alt: item.title + ' poster' })} aria-label={"View full poster for " + item.title}><img className="event-cover-img" src={item.coverImageUrl} alt="" /></button>}
-                  <span className="event-tag">{item.tag}</span>{!item.coverImageUrl && <span className="event-emoji">{item.emoji}</span>}
+                  <span className="event-tag">{item.voucher ? "VOUCHER AVAILABLE" : item.tag}</span>{!item.coverImageUrl && <span className="event-emoji">{item.emoji}</span>}
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
                 </div>
@@ -382,6 +398,7 @@ function App() {
           </div>
           {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>{eventsLoading ? 'Finding your next vibe…' : activeTab === 'Saved' ? 'No saved events yet.' : 'No upcoming approved events yet.'}</h3><p>{eventsLoading ? 'Loading approved events from ' + selectedCity + '.' : activeTab === 'Saved' ? 'Save an event and it will appear here.' : 'Check back soon. New events will appear here after VIBEZ approval.'}</p></div>}
           {eventsError && <div className="demo-note">{eventsError}. Please refresh to try again.</div>}
+          </>}
         </section>
 
         <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event, a hidden spot or a community worth finding? Help make the city more discoverable.</p></div><button onClick={openEventForm}>Share a discovery <ArrowUpRight size={17} /></button><span className="banner-star">✳</span></section>
