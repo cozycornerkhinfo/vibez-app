@@ -209,3 +209,16 @@ footer{border-color:#ffffff1c;color:#8f9b90}
 .happening-heading .eyebrow{color:#b8ff55}
 .happening-count{flex-shrink:0;padding:7px 10px;border-radius:20px;background:#b8ff55;color:#111713;font-size:10px;font-weight:800;letter-spacing:.8px}
 @media(max-width:600px){.happening-heading{align-items:flex-start;padding:15px;gap:10px}.happening-heading p{max-width:260px}.happening-count{font-size:9px;padding:6px 8px}}
+
+
+/* City selector and optional GPS city detection */
+.city-picker-wrap{display:flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #ffffff28;border-radius:24px;background:#ffffff08;color:#b8ff55;white-space:nowrap}
+.city-picker{max-width:125px;border:0;outline:0;background:transparent;color:#f5f3ea;font:700 11px 'DM Sans',sans-serif;cursor:pointer}
+.city-picker option{background:#18211b;color:#f5f3ea}
+.gps-btn{border:1px solid #b8ff55;border-radius:24px;background:transparent;color:#b8ff55;padding:8px 11px;font:800 10px 'DM Sans',sans-serif;white-space:nowrap;cursor:pointer}
+.gps-btn:disabled{opacity:.55;cursor:wait}
+@media(max-width:760px){
+  .city-picker-wrap{padding:8px 9px;gap:5px}
+  .city-picker{max-width:94px;font-size:10px}
+  .gps-btn{padding:8px 9px;font-size:9px}
+}
