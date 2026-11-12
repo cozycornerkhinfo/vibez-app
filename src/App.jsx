@@ -12,6 +12,7 @@ function App() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [eventImage, setEventImage] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
@@ -64,6 +65,9 @@ function App() {
             color: colors[event.category] || 'market',
             emoji: emojis[event.category] || '✳',
             description: event.description,
+            endTime: event.end_time || '',
+            organizerName: event.organizer_name || '',
+            organizerContact: event.organizer_contact || '',
             coverImageUrl: event.cover_image_url || null,
           };
         });
@@ -119,6 +123,23 @@ function App() {
     else window.open(url, '_blank', 'noopener,noreferrer');
   };
 
+  const telegramContactUrl = (contact) => {
+    const value = (contact || '').trim();
+    if (!value) return '';
+    const linkMatch = value.match(/(?:https?:\\/\\/)?(?:www\\.)?t\\.me\\/([A-Za-z0-9_]{5,32})\\/?/i);
+    if (linkMatch) return `https://t.me/${linkMatch[1]}`;
+    const username = value.replace(/^@/, '');
+    return /^[A-Za-z0-9_]{5,32}$/.test(username) ? `https://t.me/${username}` : '';
+  };
+
+  const openTelegramContact = (contact) => {
+    const url = telegramContactUrl(contact);
+    if (!url) return;
+    const webApp = window.Telegram?.WebApp;
+    if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
+    else window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
   const toggleSave = (id) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
   const visible = activeTab === 'Saved' ? filtered.filter((item) => saved.includes(item.id)) : filtered;
 
@@ -144,6 +165,16 @@ function App() {
         </div>
       </header>
 
+      {selectedEvent && <div className="event-modal-backdrop event-details-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setSelectedEvent(null); }}>
+        <section className="event-modal event-details-modal" role="dialog" aria-modal="true" aria-labelledby="event-details-title">
+          <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> {selectedEvent.type} · {selectedEvent.day}</div><h2 id="event-details-title">{selectedEvent.title}</h2><p>{selectedEvent.time}{selectedEvent.endTime ? ` – ${new Date(`1970-01-01T${selectedEvent.endTime}`).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : ''} · {selectedEvent.price}</p></div><button type="button" className="event-modal-close" onClick={() => setSelectedEvent(null)} aria-label="Close">×</button></div>
+          {selectedEvent.coverImageUrl && <img className="event-details-image" src={selectedEvent.coverImageUrl} alt={selectedEvent.title + ' poster'} />}
+          <div className="event-details-description">{selectedEvent.description}</div>
+          <div className="event-details-meta"><strong><MapPin size={16}/> Location</strong><span>{selectedEvent.place || 'Location not provided'}</span><button type="button" className="location-map-search" onClick={() => openMap(selectedEvent.place, selectedEvent.mapUrl)}>Open in Google Maps ↗</button></div>
+          <div className="event-details-meta"><strong>Organizer</strong><span>{selectedEvent.organizerName || 'Organizer'}</span>{selectedEvent.organizerContact && <><span className="event-contact-text">Contact: {selectedEvent.organizerContact}</span>{telegramContactUrl(selectedEvent.organizerContact) && <button type="button" className="telegram-contact-btn" onClick={() => openTelegramContact(selectedEvent.organizerContact)}>Contact on Telegram ↗</button>}</>}</div>
+          <button type="button" className="event-form-submit" onClick={() => setSelectedEvent(null)}>Close details</button>
+        </section>
+      </div>}
       {selectedImage && <div className="image-lightbox" role="dialog" aria-modal="true" aria-label="Full-screen event poster" onClick={() => setSelectedImage(null)}>
         <button type="button" className="image-lightbox-close" onClick={() => setSelectedImage(null)} aria-label="Close image">×</button>
         <img src={selectedImage.src} alt={selectedImage.alt} onClick={(e) => e.stopPropagation()} />
@@ -211,7 +242,7 @@ function App() {
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
                 </div>
-                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place, item.mapUrl)}>Go <ArrowUpRight size={14} /></button></div></div>
+                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place, item.mapUrl)}>Go <ArrowUpRight size={14} /></button></div><button type="button" className="event-details-btn" onClick={() => setSelectedEvent(item)}>View event details <ArrowUpRight size={14} /></button></div>
               </article>
             ))}
           </div>
