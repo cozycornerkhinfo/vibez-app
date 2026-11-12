@@ -24,14 +24,37 @@ function App() {
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
-  const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Community', city: 'Phnom Penh', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
+  const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Community', city: 'Phnom Penh', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '', voucher_enabled: false, voucher_title: '', voucher_benefit: '', voucher_quantity: '25', voucher_expiry: '', voucher_instructions: '' });
   const [telegramStatus, setTelegramStatus] = useState('connecting');
   const [selectedCity, setSelectedCity] = useState(() => {
     const saved = window.localStorage.getItem('vibez-city');
     return saved === 'Yangon' ? 'Yangon' : 'Phnom Penh';
   });
   const [gpsLoading, setGpsLoading] = useState(false);
+  const [myVouchers, setMyVouchers] = useState([]);
+  const [vouchersLoading, setVouchersLoading] = useState(false);
+  const [voucherBusy, setVoucherBusy] = useState(false);
+  const [voucherMessage, setVoucherMessage] = useState('');
+  const [voucherError, setVoucherError] = useState('');
+  const [redeemCode, setRedeemCode] = useState('');
   useEffect(() => { window.localStorage.setItem('vibez-city', selectedCity); }, [selectedCity]);
+  const voucherApi = async (payload) => {
+    const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-vouchers', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, initData: telegramInitData }),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Voucher request failed.');
+    return result;
+  };
+  const refreshMyVouchers = async () => {
+    if (!telegramInitData || telegramStatus !== 'connected') return;
+    setVouchersLoading(true);
+    try { const result = await voucherApi({ action: 'list' }); setMyVouchers(result.vouchers || []); }
+    catch (error) { setVoucherError(error.message || 'Could not load your vouchers.'); }
+    finally { setVouchersLoading(false); }
+  };
+  useEffect(() => { if (telegramStatus === 'connected' && telegramInitData) refreshMyVouchers(); }, [telegramStatus, telegramInitData]);
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
     if (!webApp?.initData) { setTelegramStatus('not-telegram'); return; }
@@ -100,7 +123,7 @@ function App() {
             })(),
             organizerName: event.organizer_name || '',
             organizerContact: event.organizer_contact || '',
-            coverImageUrl: event.cover_image_url || null,
+            coverImageUrl: event.cover_image_url || null,\n            voucher: event.voucher || null,
           };
         });
         if (!cancelled) setActivities(items);
@@ -128,6 +151,30 @@ function App() {
     }), [activities, category, search, clockNow]);
 
   const openEventForm = () => { setEventError(''); setEventSuccess(''); setEventForm(current => ({ ...current, city: selectedCity })); setShowEventForm(true); };
+  const claimVoucher = async (eventId) => {
+    if (!telegramInitData || telegramStatus !== 'connected') { setVoucherError('Open VIBEZ from Telegram to claim a voucher.'); return; }
+    setVoucherBusy(true); setVoucherError(''); setVoucherMessage('');
+    try {
+      const result = await voucherApi({ action: 'claim', eventId });
+      setVoucherMessage('Your voucher is ready. Code: ' + result.voucher.code);
+      await refreshMyVouchers();
+    } catch (error) { setVoucherError(error.message || 'Could not claim this voucher.'); }
+    finally { setVoucherBusy(false); }
+  };
+  const redeemVoucher = async (eventId) => {
+    setVoucherBusy(true); setVoucherError(''); setVoucherMessage('');
+    try {
+      const result = await voucherApi({ action: 'redeem', eventId, code: redeemCode });
+      setVoucherMessage('Voucher ' + result.redemption.code + ' successfully redeemed.');
+      setRedeemCode('');
+      await refreshMyVouchers();
+    } catch (error) { setVoucherError(error.message || 'Could not redeem this voucher.'); }
+    finally { setVoucherBusy(false); }
+  };
+  const copyVoucherCode = async (code) => {
+    try { await navigator.clipboard.writeText(code); setVoucherMessage('Voucher code copied.'); }
+    catch { setVoucherMessage('Your voucher code: ' + code); }
+  };
   const detectCityWithGps = () => {
     if (!navigator.geolocation) { window.alert('GPS is not available on this device. Please choose a city manually.'); return; }
     setGpsLoading(true);
@@ -165,7 +212,7 @@ function App() {
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || 'Could not submit your event.');
       setEventSuccess(result.event.title);
-      setEventForm({ title: '', description: '', category: 'Community', city: selectedCity, event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
+      setEventForm({ title: '', description: '', category: 'Community', city: selectedCity, event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '', voucher_enabled: false, voucher_title: '', voucher_benefit: '', voucher_quantity: '25', voucher_expiry: '', voucher_instructions: '' });
       setEventImage(null);
     } catch (error) { setEventError(error.message || 'Submission failed. Please try again.'); }
     finally { setEventSubmitting(false); }
@@ -196,7 +243,7 @@ function App() {
   };
 
   const toggleSave = (id) => setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
-  const visible = activeTab === 'Saved' ? filtered.filter((item) => saved.includes(item.id)) : filtered;
+  const visible = activeTab === 'Saved' ? filtered.filter((item) => saved.includes(item.id)) : activeTab === 'My Vouchers' ? [] : filtered;
 
   return (
     <div className="app-shell">
@@ -205,9 +252,9 @@ function App() {
           <span className="brand-name">VIBEZ</span>
         </a>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
-          {['Discover', 'Events', 'Community', 'Saved'].map((tab) => (
+          {['Discover', 'Events', 'Community', 'Saved', 'My Vouchers'].map((tab) => (
             <button key={tab} className={activeTab === tab ? 'nav-link active' : 'nav-link'} onClick={() => { setActiveTab(tab); setMobileMenu(false); }}>
-              {tab}{tab === 'Saved' && saved.length > 0 && <span className="saved-count">{saved.length}</span>}
+              {tab}{tab === 'Saved' && saved.length > 0 && <span className="saved-count">{saved.length}</span>}{tab === 'My Vouchers' && myVouchers.length > 0 && <span className="saved-count">{myVouchers.length}</span>}
             </button>
           ))}
         </nav>
@@ -225,6 +272,20 @@ function App() {
           <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> {selectedEvent.type} · {selectedEvent.day}</div><h2 id="event-details-title">{selectedEvent.title}</h2><p>{selectedEvent.time}{selectedEvent.endTime ? ` – ${formatLocalTime(selectedEvent.endTime)}` : ''} · {selectedEvent.price}</p></div><button type="button" className="event-modal-close" onClick={() => setSelectedEvent(null)} aria-label="Close">×</button></div>
           {selectedEvent.coverImageUrl && <img className="event-details-image" src={selectedEvent.coverImageUrl} alt={selectedEvent.title + ' poster'} />}
           <div className="event-details-description">{selectedEvent.description}</div>
+          {selectedEvent.voucher && <div className="event-voucher-offer">
+            <div className="eyebrow dark">VIBEZ VOUCHER</div>
+            <h3>{selectedEvent.voucher.title}</h3>
+            <strong>{selectedEvent.voucher.benefit}</strong>
+            <p>{selectedEvent.voucher.remaining_count} of {selectedEvent.voucher.quantity} claims remaining</p>
+            {selectedEvent.voucher.expires_at && <small>Claim by {new Date(selectedEvent.voucher.expires_at).toLocaleDateString()}</small>}
+            {(() => {
+              const claimed = myVouchers.find((voucher) => voucher.event_id === selectedEvent.id);
+              return claimed ? <div className="voucher-claimed-code"><span>{claimed.redeemed_at ? 'ALREADY REDEEMED' : 'YOUR VOUCHER CODE'}</span><strong>{claimed.code}</strong><button type="button" onClick={() => copyVoucherCode(claimed.code)}>Copy code</button></div> : <button type="button" className="voucher-claim-btn" disabled={voucherBusy || selectedEvent.voucher.remaining_count < 1} onClick={() => claimVoucher(selectedEvent.id)}>{voucherBusy ? 'Claiming…' : 'Claim your voucher'}</button>;
+            })()}
+            {selectedEvent.voucher.instructions && <small>{selectedEvent.voucher.instructions}</small>}
+          </div>}
+          {telegramStatus === 'connected' && <details className="organizer-voucher-tools"><summary>Organizer? Redeem a visitor voucher</summary><p>Enter the visitor’s code. Only the event owner’s Telegram account can redeem it.</p><input value={redeemCode} onChange={(e) => setRedeemCode(e.target.value.toUpperCase())} placeholder="VZ-XXXXX-XXXXX" maxLength={15} /><button type="button" disabled={voucherBusy || !redeemCode.trim()} onClick={() => redeemVoucher(selectedEvent.id)}>{voucherBusy ? 'Checking…' : 'Verify & redeem'}</button></details>}
+          {(voucherMessage || voucherError) && <p className={voucherError ? 'voucher-feedback error' : 'voucher-feedback'}>{voucherError || voucherMessage}</p>}
           <div className="event-details-meta"><strong><MapPin size={16}/> Location</strong><span>{selectedEvent.place || 'Location not provided'}</span><button type="button" className="location-map-search" onClick={() => openMap(selectedEvent.place, selectedEvent.mapUrl)}>Open in Google Maps ↗</button></div>
           <div className="event-details-meta"><strong>Organizer</strong><span>{selectedEvent.organizerName || 'Organizer'}</span>{selectedEvent.organizerContact && <><span className="event-contact-text">Contact: {selectedEvent.organizerContact}</span>{telegramContactUrl(selectedEvent.organizerContact) && <button type="button" className="telegram-contact-btn" onClick={() => openTelegramContact(selectedEvent.organizerContact)}>Contact on Telegram ↗</button>}</>}</div>
           <button type="button" className="event-form-submit" onClick={() => setSelectedEvent(null)}>Close details</button>
@@ -247,6 +308,16 @@ function App() {
             <div className="location-helper"><p>Want to pin the exact venue? Search for it on Google Maps, open the place and copy its Share link.</p><button type="button" className="location-map-search" onClick={() => openMap(eventForm.location || selectedCity)}>Find on Google Maps ↗</button></div>
             <label>Google Maps share link <span className="field-hint">Optional — paste the link copied from Google Maps. Visitors can open this exact pin using the Go button.</span><input type="url" maxLength="1000" name="location_map_url" value={eventForm.location_map_url} onChange={(e) => setEventForm({...eventForm,location_map_url:e.target.value})} placeholder="https://maps.app.goo.gl/..." /></label>
             <label>Cover photo <span className="field-hint">Recommended: 1200 × 675 px (16:9). Portrait posters are also welcome; VIBEZ will show the full image without cropping. JPG, PNG or WebP · maximum 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setEventImage(e.target.files?.[0] || null)} /></label>
+            <div className="voucher-builder">
+              <label className="voucher-toggle"><input type="checkbox" checked={eventForm.voucher_enabled} onChange={(e) => setEventForm({...eventForm,voucher_enabled:e.target.checked})} /><span><strong>Offer claimable vouchers</strong><small>Give visitors a unique one-time code when they claim this event offer.</small></span></label>
+              {eventForm.voucher_enabled && <div className="voucher-fields">
+                <label>Voucher title *<input required minLength="2" maxLength="100" value={eventForm.voucher_title} onChange={(e) => setEventForm({...eventForm,voucher_title:e.target.value})} placeholder="e.g. Welcome Drink" /></label>
+                <label>Discount or benefit *<input required minLength="2" maxLength="160" value={eventForm.voucher_benefit} onChange={(e) => setEventForm({...eventForm,voucher_benefit:e.target.value})} placeholder="e.g. 20% OFF / Free drink" /></label>
+                <div className="event-form-row"><label>Available claims *<input required type="number" min="1" max="100000" step="1" value={eventForm.voucher_quantity} onChange={(e) => setEventForm({...eventForm,voucher_quantity:e.target.value})} /></label><label>Claim expiry *<input required type="date" min={eventForm.event_date || new Date().toISOString().slice(0,10)} value={eventForm.voucher_expiry || eventForm.event_date} onChange={(e) => setEventForm({...eventForm,voucher_expiry:e.target.value})} /></label></div>
+                <label>Redemption instructions<input maxLength="300" value={eventForm.voucher_instructions} onChange={(e) => setEventForm({...eventForm,voucher_instructions:e.target.value})} placeholder="Show your code at the counter." /></label>
+                <p className="field-hint">Each Telegram user can claim once. Codes are unique and can only be redeemed once by the event organizer.</p>
+              </div>}
+            </div>
             <div className="event-form-row"><label>Organizer name<input maxLength="120" name="organizer_name" value={eventForm.organizer_name} onChange={(e) => setEventForm({...eventForm,organizer_name:e.target.value})} placeholder="Your name or organization" /></label><label>Telegram contact (recommended) <span className="field-hint">Enter your Telegram username, e.g. @yourusername, so visitors can message you directly.</span><input maxLength="120" name="organizer_contact" value={eventForm.organizer_contact} onChange={(e) => setEventForm({...eventForm,organizer_contact:e.target.value})} placeholder="@yourusername" /></label></div>
             {eventError && <p className="event-form-error">{eventError}</p>}
             <p className="event-review-note">Your event will be reviewed by VIBEZ before appearing publicly. Your Telegram account is attached automatically.</p>
