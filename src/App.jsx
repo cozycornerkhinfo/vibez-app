@@ -3,6 +3,14 @@ import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, S
 
 const categories = ['All vibes', 'Music', 'Markets', 'Food & Drink', 'Arts', 'Fitness', 'Community'];
 
+const formatLocalTime = (value) => {
+  if (!value) return '';
+  const [hours, minutes] = String(value).slice(0, 5).split(':').map(Number);
+  return new Date(Date.UTC(2020, 0, 1, hours, minutes)).toLocaleTimeString('en-US', {
+    timeZone: 'UTC', hour: 'numeric', minute: '2-digit',
+  });
+};
+
 function App() {
   const [telegramUser, setTelegramUser] = useState(null);
   const [activities, setActivities] = useState([]);
@@ -63,8 +71,8 @@ function App() {
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load events');
         const items = (result.events || []).map((event) => {
           const utcOffset = event.city === 'Yangon' ? '+06:30' : '+07:00';
-          const date = new Date(`${event.event_date}T12:00:00`);
-          const time = new Date(`1970-01-01T${event.start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          const dateLabel = new Date(event.event_date + 'T12:00:00Z').toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+          const time = formatLocalTime(event.start_time);
           const colors = { Music: 'music', Markets: 'market', 'Food & Drink': 'coffee', Arts: 'movie', Fitness: 'run', Community: 'makers', Other: 'market' };
           const emojis = { Music: '🎶', Markets: '🧺', 'Food & Drink': '☕', Arts: '🎨', Fitness: '🏃', Community: '✳', Other: '📍' };
           return {
@@ -72,7 +80,7 @@ function App() {
             city: event.city || selectedCity,
             title: event.title,
             type: event.category,
-            day: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase(),
+            day: dateLabel,
             time,
             place: (event.location || '').split('\nGoogle Maps: ')[0],
             mapUrl: (event.location || '').split('\nGoogle Maps: ')[1] || '',
@@ -214,7 +222,7 @@ function App() {
 
       {selectedEvent && <div className="event-modal-backdrop event-details-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setSelectedEvent(null); }}>
         <section className="event-modal event-details-modal" role="dialog" aria-modal="true" aria-labelledby="event-details-title">
-          <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> {selectedEvent.type} · {selectedEvent.day}</div><h2 id="event-details-title">{selectedEvent.title}</h2><p>{selectedEvent.time}{selectedEvent.endTime ? ` – ${new Date(`1970-01-01T${selectedEvent.endTime}`).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}` : ''} · {selectedEvent.price}</p></div><button type="button" className="event-modal-close" onClick={() => setSelectedEvent(null)} aria-label="Close">×</button></div>
+          <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> {selectedEvent.type} · {selectedEvent.day}</div><h2 id="event-details-title">{selectedEvent.title}</h2><p>{selectedEvent.time}{selectedEvent.endTime ? ` – ${formatLocalTime(selectedEvent.endTime)}` : ''} · {selectedEvent.price}</p></div><button type="button" className="event-modal-close" onClick={() => setSelectedEvent(null)} aria-label="Close">×</button></div>
           {selectedEvent.coverImageUrl && <img className="event-details-image" src={selectedEvent.coverImageUrl} alt={selectedEvent.title + ' poster'} />}
           <div className="event-details-description">{selectedEvent.description}</div>
           <div className="event-details-meta"><strong><MapPin size={16}/> Location</strong><span>{selectedEvent.place || 'Location not provided'}</span><button type="button" className="location-map-search" onClick={() => openMap(selectedEvent.place, selectedEvent.mapUrl)}>Open in Google Maps ↗</button></div>
