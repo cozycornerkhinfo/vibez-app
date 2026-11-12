@@ -222,3 +222,46 @@ footer{border-color:#ffffff1c;color:#8f9b90}
   .city-picker{max-width:94px;font-size:10px}
   .gps-btn{padding:8px 9px;font-size:9px}
 }
+
+
+/* Claimable event vouchers */
+.voucher-builder{border:1px solid rgba(184,255,85,.28);border-radius:10px;background:rgba(184,255,85,.06);padding:15px;display:grid;gap:14px}
+.voucher-toggle{display:flex!important;grid-template-columns:auto 1fr;align-items:center;gap:11px!important;cursor:pointer}
+.voucher-toggle input[type=checkbox]{width:18px!important;height:18px;accent-color:#b8ff55;flex:0 0 auto}
+.voucher-toggle span{display:grid;gap:4px}
+.voucher-toggle strong{font-size:13px;color:#f5f3ea}
+.voucher-toggle small{font-size:10px;font-weight:500;color:#aeb8ae;line-height:1.5}
+.voucher-fields{display:grid;gap:12px;padding-top:12px;border-top:1px solid #ffffff20}
+.event-voucher-offer{display:grid;gap:10px;padding:17px;border:1px solid rgba(184,255,85,.35);border-radius:10px;background:linear-gradient(130deg,rgba(184,255,85,.11),rgba(120,85,245,.12))}
+.event-voucher-offer h3{margin:0;color:#f5f3ea;font:700 21px 'Space Grotesk'}
+.event-voucher-offer>strong{font-size:16px;color:#b8ff55}
+.event-voucher-offer p,.event-voucher-offer small{margin:0;color:#b9c3b9;font-size:11px;line-height:1.5}
+.voucher-claim-btn{border:0;border-radius:7px;background:#b8ff55;color:#111713;padding:13px;font-size:12px;font-weight:900;cursor:pointer}
+.voucher-claim-btn:disabled{opacity:.5;cursor:not-allowed}
+.voucher-claimed-code{display:grid;gap:8px;padding:13px;border:1px dashed #b8ff55;border-radius:8px;background:#111713}
+.voucher-claimed-code span{font-size:9px;letter-spacing:1px;color:#aeb8ae}
+.voucher-claimed-code strong{font:800 20px 'Space Grotesk';letter-spacing:1.5px;color:#b8ff55}
+.voucher-claimed-code button,.my-voucher-code button{justify-self:start;border:0;border-radius:5px;background:#b8ff55;color:#111713;padding:8px 12px;font-size:10px;font-weight:900;cursor:pointer}
+.organizer-voucher-tools{display:grid;gap:9px;padding:13px;border:1px solid #ffffff20;border-radius:8px;background:#202b23;color:#f5f3ea}
+.organizer-voucher-tools summary{font-size:11px;font-weight:800;color:#b8ff55;cursor:pointer}
+.organizer-voucher-tools p{margin:0;color:#b9c3b9;font-size:10px;line-height:1.5}
+.organizer-voucher-tools input{width:100%;padding:11px;border:1px solid #3b4a3d;border-radius:6px;background:#111713;color:#f5f3ea;font:700 13px 'DM Sans';letter-spacing:1px}
+.organizer-voucher-tools button{border:0;border-radius:6px;background:#b8ff55;color:#111713;padding:10px;font-size:11px;font-weight:900}
+.organizer-voucher-tools button:disabled{opacity:.5}
+.voucher-feedback{margin:0;padding:10px 12px;border-radius:7px;background:#263522;color:#b8ff55;font-size:11px;line-height:1.5}
+.voucher-feedback.error{background:#422b28;color:#ffd0c7}
+.my-vouchers-panel{padding-top:8px}
+.my-voucher-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.my-voucher-card{display:grid;gap:10px;padding:18px;border:1px solid #ffffff20;border-radius:11px;background:#1b241e;color:#f5f3ea}
+.my-voucher-card h3{margin:0;font:700 20px 'Space Grotesk'}
+.my-voucher-card>strong{font-size:15px;color:#b8ff55}
+.my-voucher-card>p{margin:0;color:#aeb8ae;font-size:11px}
+.my-voucher-code{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border:1px dashed #b8ff55;border-radius:7px;background:#111713}
+.my-voucher-code span{font:800 14px 'Space Grotesk';letter-spacing:1px;color:#b8ff55}
+.my-voucher-foot{display:flex;justify-content:space-between;gap:8px;color:#aeb8ae;font-size:9px;letter-spacing:.5px}
+.my-voucher-card small{color:#aeb8ae;font-size:10px;line-height:1.5}
+.voucher-empty{text-align:center;padding:45px 18px;color:#f5f3ea}
+.voucher-empty h3{font:700 22px 'Space Grotesk'}
+.voucher-empty p{color:#aeb8ae;font-size:12px}
+.voucher-empty button{border:0;border-radius:6px;background:#b8ff55;color:#111713;padding:11px 16px;font-weight:900}
+@media(max-width:600px){.my-voucher-grid{grid-template-columns:1fr}.my-voucher-code span{font-size:12px}.my-voucher-foot{flex-wrap:wrap}}
