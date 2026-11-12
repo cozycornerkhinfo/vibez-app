@@ -117,7 +117,7 @@ function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#" onClick={() => setActiveTab('Discover')} aria-label="VIBEZ home">
-          <span className="brand-mark">V<span>•</span></span><span className="brand-name">VIBEZ</span>
+          <span className="brand-name">VIBEZ</span>
         </a>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
           {['Discover', 'Events', 'Community', 'Saved'].map((tab) => (
@@ -161,7 +161,7 @@ function App() {
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span className="eyebrow-dot" /> YOUR CITY, YOUR SCENE</div>
-            <h1>Find your<br /><span>next vibe.</span></h1>
+            <h1>Find your<br /><span>vibe.</span></h1>
             <p className="hero-description">Less scrolling. More living. Discover events, hidden gems and people doing things around your city.</p>
             <div className="hero-search">
               <Search size={19} />
@@ -210,7 +210,7 @@ function App() {
 
         <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event, a hidden spot or a community worth finding? Help make the city more discoverable.</p></div><button onClick={openEventForm}>Share a discovery <ArrowUpRight size={17} /></button><span className="banner-star">✳</span></section>
       </main>
-      <footer><a className="brand footer-brand" href="#"><span className="brand-mark">V<span>•</span></span><span className="brand-name">VIBEZ</span></a><span>BE OUT THERE. FIND YOUR PEOPLE.</span><span>© 2026 VIBEZ</span></footer>
+      <footer><a className="brand footer-brand" href="#"><span className="brand-name">VIBEZ</span></a><span>BE OUT THERE. FIND YOUR PEOPLE.</span><span>© 2026 VIBEZ</span></footer>
     </div>
   );
 }
