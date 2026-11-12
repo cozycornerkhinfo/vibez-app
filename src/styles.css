@@ -173,3 +173,10 @@ footer{border-color:#ffffff1c;color:#8f9b90}
   .nav-links{background:#111713;border-color:#ffffff20}
   .category-actions{width:100%;justify-content:space-between}
 }
+
+
+/* Free Google Maps link helper in the event submission form */
+.location-helper{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 12px;border:1px solid #ffffff20;border-radius:8px;background:#202b23}
+.location-helper p{margin:0;flex:1;min-width:190px;color:#b8c2b8;font-size:11px;line-height:1.5}
+.location-map-search{border:1px solid #b8ff55;border-radius:24px;background:#b8ff55;color:#111713;padding:9px 13px;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer}
+.location-map-search:hover{filter:brightness(1.08)}
