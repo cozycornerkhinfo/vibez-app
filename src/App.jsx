@@ -254,6 +254,14 @@ function App() {
             <div className="category-scroll">{categories.map((item) => <button key={item} onClick={() => setCategory(item)} className={category === item ? 'category-chip selected' : 'category-chip'}>{item}</button>)}</div>
             <div className="category-actions"><span className="results-count">{visible.length} THINGS TO DO</span><button type="button" className="show-everything-btn" onClick={() => { setActiveTab('Discover'); setCategory('All vibes'); setSearch(''); }}>Show everything ↗</button></div>
           </div>
+          <div className="happening-heading">
+            <div>
+              <div className="eyebrow dark"><span className="eyebrow-dot" /> LIVE CITY GUIDE</div>
+              <h3>Happening Soon</h3>
+              <p>Live events first, followed by what’s starting next — automatically sorted by Phnom Penh time.</p>
+            </div>
+            <span className="happening-count">{visible.length} {visible.length === 1 ? 'EVENT' : 'EVENTS'}</span>
+          </div>
           <div className="event-grid">
             {visible.map((item) => (
               <article className="event-card" key={item.id}>
