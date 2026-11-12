@@ -15,7 +15,7 @@ function App() {
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
-  const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Community', event_date: '', start_time: '', end_time: '', location: '', price: '', organizer_name: '', organizer_contact: '' });
+  const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Community', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
   const [telegramStatus, setTelegramStatus] = useState('connecting');
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
@@ -57,7 +57,8 @@ function App() {
             type: event.category,
             day: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase(),
             time,
-            place: event.location,
+            place: (event.location || '').split('\nGoogle Maps: ')[0],
+            mapUrl: (event.location || '').split('\nGoogle Maps: ')[1] || '',
             price: event.price || 'See details',
             tag: 'VIBEZ approved',
             color: colors[event.category] || 'market',
@@ -90,21 +91,29 @@ function App() {
     setEventSubmitting(true); setEventError('');
     try {
       const payload = new FormData();
-      Object.entries(eventForm).forEach(([key, value]) => payload.append(key, value));
+      Object.entries(eventForm).forEach(([key, value]) => {
+        if (key === 'location_map_url') return;
+        if (key === 'location') {
+          const mapUrl = eventForm.location_map_url.trim();
+          payload.append('location', mapUrl ? `${value.trim()}\nGoogle Maps: ${mapUrl}` : value.trim());
+          return;
+        }
+        payload.append(key, value);
+      });
       payload.append('initData', telegramInitData);
       if (eventImage) payload.append('cover_image', eventImage);
       const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-submit-event', { method: 'POST', body: payload });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || 'Could not submit your event.');
       setEventSuccess(result.event.title);
-      setEventForm({ title: '', description: '', category: 'Community', event_date: '', start_time: '', end_time: '', location: '', price: '', organizer_name: '', organizer_contact: '' });
+      setEventForm({ title: '', description: '', category: 'Community', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
       setEventImage(null);
     } catch (error) { setEventError(error.message || 'Submission failed. Please try again.'); }
     finally { setEventSubmitting(false); }
   };
 
-  const openMap = (place) => {
-    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
+  const openMap = (place, mapUrl = '') => {
+    const url = mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
     const webApp = window.Telegram?.WebApp;
     if (webApp?.openLink) webApp.openLink(url);
     else window.open(url, '_blank', 'noopener,noreferrer');
@@ -148,7 +157,9 @@ function App() {
             <label>Description *<textarea required minLength="10" maxLength="3000" name="description" value={eventForm.description} onChange={(e) => setEventForm({...eventForm,description:e.target.value})} placeholder="What can people expect?" rows="4" /></label>
             <div className="event-form-row"><label>Category *<select name="category" value={eventForm.category} onChange={(e) => setEventForm({...eventForm,category:e.target.value})}><option>Music</option><option>Markets</option><option>Food & Drink</option><option>Arts</option><option>Fitness</option><option>Community</option><option>Other</option></select></label><label>Ticket / price<input name="price" maxLength="60" value={eventForm.price} onChange={(e) => setEventForm({...eventForm,price:e.target.value})} placeholder="Free / $5 / Registration" /></label></div>
             <div className="event-form-row"><label>Date *<input required type="date" name="event_date" min={new Date().toISOString().slice(0,10)} value={eventForm.event_date} onChange={(e) => setEventForm({...eventForm,event_date:e.target.value})} /></label><label>Start time *<input required type="time" name="start_time" value={eventForm.start_time} onChange={(e) => setEventForm({...eventForm,start_time:e.target.value})} /></label></div>
-            <div className="event-form-row"><label>End time<input type="time" name="end_time" value={eventForm.end_time} onChange={(e) => setEventForm({...eventForm,end_time:e.target.value})} /></label><label>Location *<input required maxLength="200" name="location" value={eventForm.location} onChange={(e) => setEventForm({...eventForm,location:e.target.value})} placeholder="Venue, area or address" /></label></div>
+            <div className="event-form-row"><label>End time<input type="time" name="end_time" value={eventForm.end_time} onChange={(e) => setEventForm({...eventForm,end_time:e.target.value})} /></label><label>Location *<input required maxLength="200" name="location" value={eventForm.location} onChange={(e) => setEventForm({...eventForm,location:e.target.value})} placeholder="Venue name or address" /></label></div>
+            <div className="location-helper"><p>Want to pin the exact venue? Search for it on Google Maps, open the place and copy its Share link.</p><button type="button" className="location-map-search" onClick={() => openMap(eventForm.location || 'Phnom Penh')}>Find on Google Maps ↗</button></div>
+            <label>Google Maps share link <span className="field-hint">Optional — paste the link copied from Google Maps. Visitors can open this exact pin using the Go button.</span><input type="url" maxLength="1000" name="location_map_url" value={eventForm.location_map_url} onChange={(e) => setEventForm({...eventForm,location_map_url:e.target.value})} placeholder="https://maps.app.goo.gl/..." /></label>
             <label>Cover photo <span className="field-hint">Recommended: 1200 × 675 px (16:9). Portrait posters are also welcome; VIBEZ will show the full image without cropping. JPG, PNG or WebP · maximum 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setEventImage(e.target.files?.[0] || null)} /></label>
             <div className="event-form-row"><label>Organizer name<input maxLength="120" name="organizer_name" value={eventForm.organizer_name} onChange={(e) => setEventForm({...eventForm,organizer_name:e.target.value})} placeholder="Your name or organization" /></label><label>Contact (optional)<input maxLength="120" name="organizer_contact" value={eventForm.organizer_contact} onChange={(e) => setEventForm({...eventForm,organizer_contact:e.target.value})} placeholder="Telegram / phone / email" /></label></div>
             {eventError && <p className="event-form-error">{eventError}</p>}
@@ -200,7 +211,7 @@ function App() {
                   <button className={saved.includes(item.id) ? 'save-btn saved' : 'save-btn'} onClick={() => toggleSave(item.id)} aria-label={saved.includes(item.id) ? 'Remove saved event' : 'Save event'}><Bookmark size={17} fill={saved.includes(item.id) ? 'currentColor' : 'none'} /></button>
                   <span className="visual-index">VZ / 0{item.id}</span>
                 </div>
-                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place)}>Go <ArrowUpRight size={14} /></button></div></div>
+                <div className="event-info"><div className="event-type">{item.type} <span>•</span> {item.day}</div><h3>{item.title}</h3><p>{item.description}</p><div className="event-footer"><span><MapPin size={14} />{item.place}</span><strong>{item.price}</strong></div><div className="event-time"><span><CalendarDays size={14} /> {item.time}</span><button type="button" className="go-btn" onClick={() => openMap(item.place, item.mapUrl)}>Go <ArrowUpRight size={14} /></button></div></div>
               </article>
             ))}
           </div>
