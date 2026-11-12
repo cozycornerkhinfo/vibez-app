@@ -180,3 +180,16 @@ footer{border-color:#ffffff1c;color:#8f9b90}
 .location-helper p{margin:0;flex:1;min-width:190px;color:#b8c2b8;font-size:11px;line-height:1.5}
 .location-map-search{border:1px solid #b8ff55;border-radius:24px;background:#b8ff55;color:#111713;padding:9px 13px;font-size:11px;font-weight:800;white-space:nowrap;cursor:pointer}
 .location-map-search:hover{filter:brightness(1.08)}
+
+
+/* Full event details and direct organizer contact */
+.event-details-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:12px;padding:10px 12px;border:1px solid #ffffff28;border-radius:7px;background:#ffffff08;color:#b8ff55;font-size:11px;font-weight:800;cursor:pointer}
+.event-details-btn:hover{background:#263522;border-color:#b8ff55}
+.event-details-modal{display:grid;gap:16px}
+.event-details-image{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:8px;background:#111713}
+.event-details-description{white-space:pre-wrap;color:#e0e8df;font-size:13px;line-height:1.75}
+.event-details-meta{display:grid;gap:8px;padding:13px;border:1px solid #ffffff20;border-radius:8px;background:#202b23;color:#dce5dc;font-size:12px}
+.event-details-meta>strong{display:flex;align-items:center;gap:7px;color:#b8ff55;font-size:12px}
+.event-contact-text{overflow-wrap:anywhere;color:#b8c2b8}
+.telegram-contact-btn{justify-self:start;border:0;border-radius:24px;background:#229ed9;color:white;padding:10px 15px;font-size:12px;font-weight:800;cursor:pointer}
+.event-details-backdrop{z-index:35}
