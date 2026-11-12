@@ -370,7 +370,7 @@ function App() {
                 <strong>{voucher.benefit}</strong>
                 <p>{voucher.event_title}</p>
                 <div className="my-voucher-code"><span>{voucher.code}</span><button type="button" onClick={() => copyVoucherCode(voucher.code)}>Copy</button></div>
-                <div className="my-voucher-foot"><span>{voucher.redeemed_at ? 'REDEEMED' : 'NOT REDEEMED'}</span><span>{voucher.expires_at ? 'Expires ' + new Date(voucher.expires_at).toLocaleDateString() : 'No expiry'}</span></div>
+                <div className="my-voucher-foot"><span>{voucher.redeemed_at ? 'REDEEMED' : voucher.expired ? 'EXPIRED' : 'NOT REDEEMED'}</span><span>{voucher.expires_at ? 'Expires ' + new Date(voucher.expires_at).toLocaleDateString() : 'No expiry'}</span></div>
                 {voucher.instructions && <small>{voucher.instructions}</small>}
               </article>)}
             </div>
