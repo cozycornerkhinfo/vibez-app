@@ -16,8 +16,14 @@ function App() {
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
-  const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Community', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
+  const [eventForm, setEventForm] = useState({ title: '', description: '', category: 'Community', city: 'Phnom Penh', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
   const [telegramStatus, setTelegramStatus] = useState('connecting');
+  const [selectedCity, setSelectedCity] = useState(() => {
+    const saved = window.localStorage.getItem('vibez-city');
+    return saved === 'Yangon' ? 'Yangon' : 'Phnom Penh';
+  });
+  const [gpsLoading, setGpsLoading] = useState(false);
+  useEffect(() => { window.localStorage.setItem('vibez-city', selectedCity); }, [selectedCity]);
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
     if (!webApp?.initData) { setTelegramStatus('not-telegram'); return; }
@@ -49,17 +55,21 @@ function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-public-events')
+    setEventsLoading(true);
+    setEventsError('');
+    fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-public-events?city=' + encodeURIComponent(selectedCity))
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load events');
         const items = (result.events || []).map((event) => {
+          const utcOffset = event.city === 'Yangon' ? '+06:30' : '+07:00';
           const date = new Date(`${event.event_date}T12:00:00`);
           const time = new Date(`1970-01-01T${event.start_time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
           const colors = { Music: 'music', Markets: 'market', 'Food & Drink': 'coffee', Arts: 'movie', Fitness: 'run', Community: 'makers', Other: 'market' };
           const emojis = { Music: '🎶', Markets: '🧺', 'Food & Drink': '☕', Arts: '🎨', Fitness: '🏃', Community: '✳', Other: '📍' };
           return {
             id: event.id,
+            city: event.city || selectedCity,
             title: event.title,
             type: event.category,
             day: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase(),
@@ -72,11 +82,11 @@ function App() {
             emoji: emojis[event.category] || '✳',
             description: event.description,
             endTime: event.end_time || '',
-            startsAt: new Date(event.event_date + 'T' + (event.start_time || '00:00').slice(0, 5) + ':00+07:00').getTime(),
+            startsAt: new Date(event.event_date + 'T' + (event.start_time || '00:00').slice(0, 5) + ':00' + utcOffset).getTime(),
             endsAt: (() => {
-              const start = new Date(event.event_date + 'T' + (event.start_time || '00:00').slice(0, 5) + ':00+07:00').getTime();
-              if (!event.end_time) return new Date(event.event_date + 'T23:59:59+07:00').getTime();
-              let end = new Date(event.event_date + 'T' + event.end_time.slice(0, 5) + ':00+07:00').getTime();
+              const start = new Date(event.event_date + 'T' + (event.start_time || '00:00').slice(0, 5) + ':00' + utcOffset).getTime();
+              if (!event.end_time) return new Date(event.event_date + 'T23:59:59' + utcOffset).getTime();
+              let end = new Date(event.event_date + 'T' + event.end_time.slice(0, 5) + ':00' + utcOffset).getTime();
               if (end <= start) end += 24 * 60 * 60 * 1000;
               return end;
             })(),
@@ -94,7 +104,7 @@ function App() {
         if (!cancelled) setEventsLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [selectedCity]);
 
   const filtered = useMemo(() => activities
     .filter((item) => {
@@ -109,7 +119,23 @@ function App() {
       return a.startsAt - b.startsAt;
     }), [activities, category, search, clockNow]);
 
-  const openEventForm = () => { setEventError(''); setEventSuccess(''); setShowEventForm(true); };
+  const openEventForm = () => { setEventError(''); setEventSuccess(''); setEventForm(current => ({ ...current, city: selectedCity })); setShowEventForm(true); };
+  const detectCityWithGps = () => {
+    if (!navigator.geolocation) { window.alert('GPS is not available on this device. Please choose a city manually.'); return; }
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition((position) => {
+      const { latitude, longitude } = position.coords;
+      const inPhnomPenh = Math.abs(latitude - 11.5564) < 0.65 && Math.abs(longitude - 104.9282) < 0.75;
+      const inYangon = Math.abs(latitude - 16.8661) < 0.65 && Math.abs(longitude - 96.1951) < 0.75;
+      if (inPhnomPenh) setSelectedCity('Phnom Penh');
+      else if (inYangon) setSelectedCity('Yangon');
+      else window.alert('VIBEZ currently supports Phnom Penh and Yangon. Please choose one manually.');
+      setGpsLoading(false);
+    }, (error) => {
+      setGpsLoading(false);
+      window.alert(error.code === 1 ? 'Location permission was denied. You can still choose a city manually.' : 'Could not detect your location. Please choose a city manually.');
+    }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
+  };
   const submitEvent = async (e) => {
     e.preventDefault();
     if (!telegramInitData || telegramStatus !== 'connected') { setEventError('Please reopen VIBEZ from Telegram and try again.'); return; }
@@ -131,7 +157,7 @@ function App() {
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || 'Could not submit your event.');
       setEventSuccess(result.event.title);
-      setEventForm({ title: '', description: '', category: 'Community', event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
+      setEventForm({ title: '', description: '', category: 'Community', city: selectedCity, event_date: '', start_time: '', end_time: '', location: '', location_map_url: '', price: '', organizer_name: '', organizer_contact: '' });
       setEventImage(null);
     } catch (error) { setEventError(error.message || 'Submission failed. Please try again.'); }
     finally { setEventSubmitting(false); }
@@ -180,7 +206,7 @@ function App() {
         <div className="top-actions">
           {telegramStatus === 'connected' && telegramUser && <span className="telegram-user">👤 {telegramUser.first_name}{telegramUser.username ? ' @' + telegramUser.username : ''}</span>}
           {telegramStatus === 'error' && <span className="telegram-user telegram-error">Account verification failed</span>}
-          <span className="city-pill"><MapPin size={14} /> Phnom Penh <span className="chevron">⌄</span></span>
+          <label className="city-picker-wrap" aria-label="Choose city"><MapPin size={14} /><select className="city-picker" value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}><option value="Phnom Penh">Phnom Penh</option><option value="Yangon">Yangon</option></select></label><button type="button" className="gps-btn" onClick={detectCityWithGps} disabled={gpsLoading}>{gpsLoading ? "Locating…" : "⌖ GPS"}</button>
           <button className="submit-btn" onClick={openEventForm}>＋ <span>Submit an event</span></button>
           <button className="menu-btn" onClick={() => setMobileMenu(!mobileMenu)} aria-label="Toggle menu">{mobileMenu ? <X /> : <Menu />}</button>
         </div>
@@ -202,12 +228,12 @@ function App() {
       </div>}
       {showEventForm && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEventForm(false); }}>
         <section className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-form-title">
-          <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY SUBMISSION</div><h2 id="event-form-title">Share an event.</h2><p>Tell Phnom Penh what’s happening.</p></div><button type="button" className="event-modal-close" onClick={() => setShowEventForm(false)} aria-label="Close">×</button></div>
+          <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY SUBMISSION</div><h2 id="event-form-title">Share an event.</h2><p>Tell {selectedCity} what’s happening.</p></div><button type="button" className="event-modal-close" onClick={() => setShowEventForm(false)} aria-label="Close">×</button></div>
           {eventSuccess ? <div className="event-success"><div className="success-icon">✓</div><h3>Event submitted!</h3><p><strong>{eventSuccess}</strong> is now waiting for VIBEZ admin review. We'll publish it after approval.</p><button type="button" className="submit-btn" onClick={() => setShowEventForm(false)}>Done</button></div> :
           <form className="event-form" onSubmit={submitEvent}>
             <label>Event name *<input required minLength="3" maxLength="120" name="title" value={eventForm.title} onChange={(e) => setEventForm({...eventForm,title:e.target.value})} placeholder="e.g. Weekend Creative Market" /></label>
             <label>Description *<textarea required minLength="10" maxLength="3000" name="description" value={eventForm.description} onChange={(e) => setEventForm({...eventForm,description:e.target.value})} placeholder="What can people expect?" rows="4" /></label>
-            <div className="event-form-row"><label>Category *<select name="category" value={eventForm.category} onChange={(e) => setEventForm({...eventForm,category:e.target.value})}><option>Music</option><option>Markets</option><option>Food & Drink</option><option>Arts</option><option>Fitness</option><option>Community</option><option>Other</option></select></label><label>Ticket / price<input name="price" maxLength="60" value={eventForm.price} onChange={(e) => setEventForm({...eventForm,price:e.target.value})} placeholder="Free / $5 / Registration" /></label></div>
+            <div className="event-form-row"><label>City *<select name="city" value={eventForm.city} onChange={(e) => setEventForm({...eventForm,city:e.target.value})}><option value="Phnom Penh">Phnom Penh</option><option value="Yangon">Yangon</option></select></label><label>Category *<select name="category" value={eventForm.category} onChange={(e) => setEventForm({...eventForm,category:e.target.value})}><option>Music</option><option>Markets</option><option>Food & Drink</option><option>Arts</option><option>Fitness</option><option>Community</option><option>Other</option></select></label><label>Ticket / price<input name="price" maxLength="60" value={eventForm.price} onChange={(e) => setEventForm({...eventForm,price:e.target.value})} placeholder="Free / $5 / Registration" /></label></div>
             <div className="event-form-row"><label>Date *<input required type="date" name="event_date" min={new Date().toISOString().slice(0,10)} value={eventForm.event_date} onChange={(e) => setEventForm({...eventForm,event_date:e.target.value})} /></label><label>Start time *<input required type="time" name="start_time" value={eventForm.start_time} onChange={(e) => setEventForm({...eventForm,start_time:e.target.value})} /></label></div>
             <div className="event-form-row"><label>End time<input type="time" name="end_time" value={eventForm.end_time} onChange={(e) => setEventForm({...eventForm,end_time:e.target.value})} /></label><label>Location *<input required maxLength="200" name="location" value={eventForm.location} onChange={(e) => setEventForm({...eventForm,location:e.target.value})} placeholder="Venue name or address" /></label></div>
             <div className="location-helper"><p>Want to pin the exact venue? Search for it on Google Maps, open the place and copy its Share link.</p><button type="button" className="location-map-search" onClick={() => openMap(eventForm.location || 'Phnom Penh')}>Find on Google Maps ↗</button></div>
@@ -231,7 +257,7 @@ function App() {
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="What are you in the mood for?" aria-label="Search activities" />
               <button onClick={() => document.getElementById('discover')?.scrollIntoView({ behavior: 'smooth' })}>Explore <ArrowUpRight size={16} /></button>
             </div>
-            <div className="hero-meta"><span><span className="pulse-dot" /> Discovering Phnom Penh</span><span>Made for going out, not staying in.</span></div>
+            <div className="hero-meta"><span><span className="pulse-dot" /> Discovering {selectedCity}</span><span>Made for going out, not staying in.</span></div>
           </div>
           <div className="hero-art" aria-label="Illustration of city activities">
             <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" />
@@ -258,7 +284,7 @@ function App() {
             <div>
               <div className="eyebrow dark"><span className="eyebrow-dot" /> LIVE CITY GUIDE</div>
               <h3>Happening Soon</h3>
-              <p>Live events first, followed by what’s starting next — automatically sorted by Phnom Penh time.</p>
+              <p>Live events first, followed by what’s starting next — automatically sorted by {selectedCity} local time.</p>
             </div>
             <span className="happening-count">{visible.length} {visible.length === 1 ? 'EVENT' : 'EVENTS'}</span>
           </div>
@@ -275,7 +301,7 @@ function App() {
               </article>
             ))}
           </div>
-          {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>{eventsLoading ? 'Finding your next vibe…' : activeTab === 'Saved' ? 'No saved events yet.' : 'No upcoming approved events yet.'}</h3><p>{eventsLoading ? 'Loading approved events from Phnom Penh.' : activeTab === 'Saved' ? 'Save an event and it will appear here.' : 'Check back soon. New events will appear here after VIBEZ approval.'}</p></div>}
+          {visible.length === 0 && <div className="empty-state"><span>✳</span><h3>{eventsLoading ? 'Finding your next vibe…' : activeTab === 'Saved' ? 'No saved events yet.' : 'No upcoming approved events yet.'}</h3><p>{eventsLoading ? 'Loading approved events from ' + selectedCity + '.' : activeTab === 'Saved' ? 'Save an event and it will appear here.' : 'Check back soon. New events will appear here after VIBEZ approval.'}</p></div>}
           {eventsError && <div className="demo-note">{eventsError}. Please refresh to try again.</div>}
         </section>
 
