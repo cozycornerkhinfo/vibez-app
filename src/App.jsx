@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X } from 'lucide-react';
+import { supabase } from './lib/supabase';
 
 const categories = ['All vibes', 'Music', 'Markets', 'Food & Drink', 'Arts', 'Fitness', 'Community'];
 
@@ -13,6 +14,15 @@ const formatLocalTime = (value) => {
 
 function App() {
   const [telegramUser, setTelegramUser] = useState(null);
+  const [emailUser, setEmailUser] = useState(null);
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
+  const [emailAuthEmail, setEmailAuthEmail] = useState('');
+  const [emailAuthCode, setEmailAuthCode] = useState('');
+  const [emailAuthStep, setEmailAuthStep] = useState('email');
+  const [emailAuthBusy, setEmailAuthBusy] = useState(false);
+  const [emailAuthError, setEmailAuthError] = useState('');
+  const [emailAuthMessage, setEmailAuthMessage] = useState('');
+  const [openFormAfterEmailLogin, setOpenFormAfterEmailLogin] = useState(false);
   const [activities, setActivities] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState('');
@@ -38,6 +48,16 @@ function App() {
   const [voucherError, setVoucherError] = useState('');
   const [redeemCode, setRedeemCode] = useState('');
   useEffect(() => { window.localStorage.setItem('vibez-city', selectedCity); }, [selectedCity]);
+  useEffect(() => {
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (active && data.session?.user) setEmailUser(data.session.user);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setEmailUser(session?.user || null);
+    });
+    return () => { active = false; subscription.unsubscribe(); };
+  }, []);
   const voucherApi = async (payload) => {
     const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-vouchers', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -151,7 +171,60 @@ function App() {
       return a.startsAt - b.startsAt;
     }), [activities, category, search, clockNow]);
 
-  const openEventForm = () => { setEventError(''); setEventSuccess(''); setEventForm(current => ({ ...current, city: selectedCity })); setShowEventForm(true); };
+  const sendEmailCode = async (e) => {
+    e.preventDefault();
+    setEmailAuthBusy(true); setEmailAuthError(''); setEmailAuthMessage('');
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: emailAuthEmail.trim().toLowerCase(),
+        options: { shouldCreateUser: true },
+      });
+      if (error) throw error;
+      setEmailAuthStep('code');
+      setEmailAuthMessage('We sent a 6-digit verification code to your email. Check your inbox and spam folder.');
+    } catch (error) {
+      setEmailAuthError(error.message || 'Could not send your verification code.');
+    } finally { setEmailAuthBusy(false); }
+  };
+  const verifyEmailCode = async (e) => {
+    e.preventDefault();
+    setEmailAuthBusy(true); setEmailAuthError(''); setEmailAuthMessage('');
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: emailAuthEmail.trim().toLowerCase(),
+        token: emailAuthCode.trim(),
+        type: 'email',
+      });
+      if (error) throw error;
+      setEmailUser(data.user || null);
+      setShowEmailAuth(false);
+      setEmailAuthCode('');
+      if (openFormAfterEmailLogin) {
+        setEventForm(current => ({ ...current, city: selectedCity }));
+        setShowEventForm(true);
+        setOpenFormAfterEmailLogin(false);
+      }
+    } catch (error) {
+      setEmailAuthError(error.message || 'That code could not be verified. Please try again.');
+    } finally { setEmailAuthBusy(false); }
+  };
+  const signOutEmail = async () => {
+    await supabase.auth.signOut();
+    setEmailUser(null);
+  };
+  const openEventForm = () => {
+    setEventError(''); setEventSuccess('');
+    if (telegramStatus === 'connected' || emailUser) {
+      setEventForm(current => ({ ...current, city: selectedCity }));
+      setShowEventForm(true);
+      return;
+    }
+    setOpenFormAfterEmailLogin(true);
+    setEmailAuthStep('email');
+    setEmailAuthError('');
+    setEmailAuthMessage('');
+    setShowEmailAuth(true);
+  };
   const claimVoucher = async (eventId) => {
     if (!telegramInitData || telegramStatus !== 'connected') { setVoucherError('Open VIBEZ from Telegram to claim a voucher.'); return; }
     setVoucherBusy(true); setVoucherError(''); setVoucherMessage('');
@@ -194,9 +267,16 @@ function App() {
   };
   const submitEvent = async (e) => {
     e.preventDefault();
-    if (!telegramInitData || telegramStatus !== 'connected') { setEventError('Please reopen VIBEZ from Telegram and try again.'); return; }
     setEventSubmitting(true); setEventError('');
     try {
+      const isTelegramUser = !!telegramInitData && telegramStatus === 'connected';
+      let accessToken = '';
+      if (!isTelegramUser) {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        accessToken = data.session?.access_token || '';
+        if (!accessToken) throw new Error('Please sign in with your email before submitting this event.');
+      }
       const payload = new FormData();
       Object.entries(eventForm).forEach(([key, value]) => {
         if (key === 'location_map_url') return;
@@ -207,9 +287,10 @@ function App() {
         }
         payload.append(key, value);
       });
-      payload.append('initData', telegramInitData);
+      if (isTelegramUser) payload.append('initData', telegramInitData);
       if (eventImage) payload.append('cover_image', eventImage);
-      const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-submit-event', { method: 'POST', body: payload });
+      const headers = accessToken ? { Authorization: 'Bearer ' + accessToken } : {};
+      const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-submit-event', { method: 'POST', headers, body: payload });
       const result = await response.json();
       if (!response.ok || !result.ok) throw new Error(result.error || 'Could not submit your event.');
       setEventSuccess(result.event.title);
@@ -261,6 +342,8 @@ function App() {
         </nav>
         <div className="top-actions">
           {telegramStatus === 'connected' && telegramUser && <span className="telegram-user">👤 {telegramUser.first_name}{telegramUser.username ? ' @' + telegramUser.username : ''}</span>}
+          {telegramStatus !== 'connected' && emailUser && <><span className="telegram-user">👤 {emailUser.email}</span><button type="button" className="email-signout-btn" onClick={signOutEmail}>Sign out</button></>}
+          {telegramStatus !== 'connected' && !emailUser && <button type="button" className="email-signin-btn" onClick={() => { setOpenFormAfterEmailLogin(false); setEmailAuthStep('email'); setEmailAuthError(''); setEmailAuthMessage(''); setShowEmailAuth(true); }}>Sign in</button>}
           {telegramStatus === 'error' && <span className="telegram-user telegram-error">Account verification failed</span>}
           <label className="city-picker-wrap" aria-label="Choose city"><MapPin size={14} /><select className="city-picker" value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}><option value="Phnom Penh">Phnom Penh</option><option value="Yangon">Yangon</option></select></label><button type="button" className="gps-btn" onClick={detectCityWithGps} disabled={gpsLoading}>{gpsLoading ? "Locating…" : "⌖ GPS"}</button>
           <button className="submit-btn" onClick={openEventForm}>＋ <span>Submit an event</span></button>
@@ -296,6 +379,20 @@ function App() {
         <button type="button" className="image-lightbox-close" onClick={() => setSelectedImage(null)} aria-label="Close image">×</button>
         <img src={selectedImage.src} alt={selectedImage.alt} onClick={(e) => e.stopPropagation()} />
       </div>}
+      {showEmailAuth && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEmailAuth(false); }}>
+        <section className="event-modal email-auth-modal" role="dialog" aria-modal="true" aria-labelledby="email-auth-title">
+          <div className="event-modal-heading">
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> VIBEZ ACCOUNT</div><h2 id="email-auth-title">{emailAuthStep === 'email' ? 'Sign in with email.' : 'Check your inbox.'}</h2><p>{emailAuthStep === 'email' ? 'We’ll send you a one-time verification code.' : 'Enter the 6-digit code we sent to ' + emailAuthEmail}</p></div>
+            <button type="button" className="event-modal-close" onClick={() => setShowEmailAuth(false)} aria-label="Close">×</button>
+          </div>
+          <form className="event-form email-auth-form" onSubmit={emailAuthStep === 'email' ? sendEmailCode : verifyEmailCode}>
+            {emailAuthStep === 'email' ? <label>Email address *<input required type="email" autoComplete="email" value={emailAuthEmail} onChange={(e) => setEmailAuthEmail(e.target.value)} placeholder="you@example.com" /></label> : <><label>6-digit code *<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength="6" maxLength="6" value={emailAuthCode} onChange={(e) => setEmailAuthCode(e.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="123456" /></label><button type="button" className="email-change-btn" onClick={() => { setEmailAuthStep('email'); setEmailAuthCode(''); setEmailAuthError(''); setEmailAuthMessage(''); }}>Change email address</button></>}
+            {emailAuthMessage && <p className="email-auth-message">{emailAuthMessage}</p>}
+            {emailAuthError && <p className="event-form-error">{emailAuthError}</p>}
+            <button className="event-form-submit" type="submit" disabled={emailAuthBusy}>{emailAuthBusy ? 'Please wait…' : emailAuthStep === 'email' ? 'Send verification code ↗' : 'Verify & continue ↗'}</button>
+          </form>
+        </section>
+      </div>}
       {showEventForm && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEventForm(false); }}>
         <section className="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-form-title">
           <div className="event-modal-heading"><div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY SUBMISSION</div><h2 id="event-form-title">Share an event.</h2><p>Tell {selectedCity} what’s happening.</p></div><button type="button" className="event-modal-close" onClick={() => setShowEventForm(false)} aria-label="Close">×</button></div>
@@ -309,7 +406,7 @@ function App() {
             <div className="location-helper"><p>Want to pin the exact venue? Search for it on Google Maps, open the place and copy its Share link.</p><button type="button" className="location-map-search" onClick={() => openMap(eventForm.location || selectedCity)}>Find on Google Maps ↗</button></div>
             <label>Google Maps share link <span className="field-hint">Optional — paste the link copied from Google Maps. Visitors can open this exact pin using the Go button.</span><input type="url" maxLength="1000" name="location_map_url" value={eventForm.location_map_url} onChange={(e) => setEventForm({...eventForm,location_map_url:e.target.value})} placeholder="https://maps.app.goo.gl/..." /></label>
             <label>Cover photo <span className="field-hint">Recommended: 1200 × 675 px (16:9). Portrait posters are also welcome; VIBEZ will show the full image without cropping. JPG, PNG or WebP · maximum 5 MB</span><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setEventImage(e.target.files?.[0] || null)} /></label>
-            <div className="voucher-builder">
+            {telegramStatus === 'connected' && <div className="voucher-builder">
               <label className="voucher-toggle"><input type="checkbox" checked={eventForm.voucher_enabled} onChange={(e) => setEventForm({...eventForm,voucher_enabled:e.target.checked})} /><span><strong>Offer claimable vouchers</strong><small>Give visitors a unique one-time code when they claim this event offer.</small></span></label>
               {eventForm.voucher_enabled && <div className="voucher-fields">
                 <label>Voucher title *<input required minLength="2" maxLength="100" value={eventForm.voucher_title} onChange={(e) => setEventForm({...eventForm,voucher_title:e.target.value})} placeholder="e.g. Welcome Drink" /></label>
@@ -318,11 +415,12 @@ function App() {
                 <label>Redemption instructions<input maxLength="300" value={eventForm.voucher_instructions} onChange={(e) => setEventForm({...eventForm,voucher_instructions:e.target.value})} placeholder="Show your code at the counter." /></label>
                 <p className="field-hint">Each Telegram user can claim once. Codes are unique and can only be redeemed once by the event organizer.</p>
               </div>}
-            </div>
+            </div>}
+            {telegramStatus !== 'connected' && <p className="field-hint">Voucher offers are currently available to Telegram-verified organizers only.</p>}
             <div className="event-form-row"><label>Organizer name<input maxLength="120" name="organizer_name" value={eventForm.organizer_name} onChange={(e) => setEventForm({...eventForm,organizer_name:e.target.value})} placeholder="Your name or organization" /></label><label>Telegram contact (recommended) <span className="field-hint">Enter your Telegram username, e.g. @yourusername, so visitors can message you directly.</span><input maxLength="120" name="organizer_contact" value={eventForm.organizer_contact} onChange={(e) => setEventForm({...eventForm,organizer_contact:e.target.value})} placeholder="@yourusername" /></label></div>
             {eventError && <p className="event-form-error">{eventError}</p>}
-            <p className="event-review-note">Your event will be reviewed by VIBEZ before appearing publicly. Your Telegram account is attached automatically.</p>
-            <button className="event-form-submit" type="submit" disabled={eventSubmitting || telegramStatus !== 'connected'}>{eventSubmitting ? 'Submitting…' : 'Submit event for review ↗'}</button>
+            <p className="event-review-note">Your event will be reviewed by VIBEZ before appearing publicly. {telegramStatus === 'connected' ? 'Your Telegram account' : 'Your verified email account'} is attached automatically.</p>
+            <button className="event-form-submit" type="submit" disabled={eventSubmitting}>{eventSubmitting ? 'Submitting…' : 'Submit event for review ↗'}</button>
           </form>}
         </section>
       </div>}
