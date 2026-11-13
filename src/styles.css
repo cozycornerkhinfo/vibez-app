@@ -265,3 +265,12 @@ footer{border-color:#ffffff1c;color:#8f9b90}
 .voucher-empty p{color:#aeb8ae;font-size:12px}
 .voucher-empty button{border:0;border-radius:6px;background:#b8ff55;color:#111713;padding:11px 16px;font-weight:900}
 @media(max-width:600px){.my-voucher-grid{grid-template-columns:1fr}.my-voucher-code span{font-size:12px}.my-voucher-foot{flex-wrap:wrap}}
+
+
+.email-signin-btn,.email-signout-btn,.email-change-btn{border:1px solid #dfe5d9;background:#fff;color:#26352a;border-radius:24px;padding:9px 13px;font-size:11px;font-weight:700;white-space:nowrap}
+.email-signout-btn{padding:7px 10px}
+.email-auth-modal{max-width:480px}
+.email-auth-form{padding-top:12px}
+.email-auth-message{margin:0;color:#52734a;font-size:12px;line-height:1.5;background:#eff7e9;border-radius:7px;padding:11px 13px}
+.email-change-btn{align-self:flex-start;margin-top:-5px}
+@media(max-width:700px){.email-signin-btn,.email-signout-btn{font-size:10px;padding:8px 9px}.email-auth-modal{width:calc(100% - 28px)}}
