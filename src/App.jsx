@@ -50,11 +50,20 @@ function App() {
   useEffect(() => { window.localStorage.setItem('vibez-city', selectedCity); }, [selectedCity]);
   useEffect(() => {
     let active = true;
+    const applySession = (session) => {
+      setEmailUser(session?.user || null);
+      if (session?.user && window.sessionStorage.getItem('vibez-open-event-after-auth') === '1') {
+        window.sessionStorage.removeItem('vibez-open-event-after-auth');
+        setEventForm(current => ({ ...current, city: selectedCity }));
+        setShowEventForm(true);
+        setShowEmailAuth(false);
+      }
+    };
     supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session?.user) setEmailUser(data.session.user);
+      if (active) applySession(data.session);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setEmailUser(session?.user || null);
+      if (active) applySession(session);
     });
     return () => { active = false; subscription.unsubscribe(); };
   }, []);
@@ -171,42 +180,20 @@ function App() {
       return a.startsAt - b.startsAt;
     }), [activities, category, search, clockNow]);
 
-  const sendEmailCode = async (e) => {
-    e.preventDefault();
-    setEmailAuthBusy(true); setEmailAuthError(''); setEmailAuthMessage('');
+  const signInWithGoogle = async () => {
+    setEmailAuthBusy(true);
+    setEmailAuthError('');
+    setEmailAuthMessage('');
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: emailAuthEmail.trim().toLowerCase(),
-        options: { shouldCreateUser: true },
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
       });
       if (error) throw error;
-      setEmailAuthStep('code');
-      setEmailAuthMessage('We sent a 6-digit verification code to your email. Check your inbox and spam folder.');
     } catch (error) {
-      setEmailAuthError(error.message || 'Could not send your verification code.');
-    } finally { setEmailAuthBusy(false); }
-  };
-  const verifyEmailCode = async (e) => {
-    e.preventDefault();
-    setEmailAuthBusy(true); setEmailAuthError(''); setEmailAuthMessage('');
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: emailAuthEmail.trim().toLowerCase(),
-        token: emailAuthCode.trim(),
-        type: 'email',
-      });
-      if (error) throw error;
-      setEmailUser(data.user || null);
-      setShowEmailAuth(false);
-      setEmailAuthCode('');
-      if (openFormAfterEmailLogin) {
-        setEventForm(current => ({ ...current, city: selectedCity }));
-        setShowEventForm(true);
-        setOpenFormAfterEmailLogin(false);
-      }
-    } catch (error) {
-      setEmailAuthError(error.message || 'That code could not be verified. Please try again.');
-    } finally { setEmailAuthBusy(false); }
+      setEmailAuthError(error.message || 'Could not start Google sign-in. Please try again.');
+      setEmailAuthBusy(false);
+    }
   };
   const signOutEmail = async () => {
     await supabase.auth.signOut();
@@ -219,8 +206,7 @@ function App() {
       setShowEventForm(true);
       return;
     }
-    setOpenFormAfterEmailLogin(true);
-    setEmailAuthStep('email');
+    window.sessionStorage.setItem('vibez-open-event-after-auth', '1');
     setEmailAuthError('');
     setEmailAuthMessage('');
     setShowEmailAuth(true);
@@ -382,15 +368,14 @@ function App() {
       {showEmailAuth && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEmailAuth(false); }}>
         <section className="event-modal email-auth-modal" role="dialog" aria-modal="true" aria-labelledby="email-auth-title">
           <div className="event-modal-heading">
-            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> VIBEZ ACCOUNT</div><h2 id="email-auth-title">{emailAuthStep === 'email' ? 'Sign in with email.' : 'Check your inbox.'}</h2><p>{emailAuthStep === 'email' ? 'We’ll send you a one-time verification code.' : 'Enter the 6-digit code we sent to ' + emailAuthEmail}</p></div>
-            <button type="button" className="event-modal-close" onClick={() => { setShowEmailAuth(false); setOpenFormAfterEmailLogin(false); }} aria-label="Close">×</button>
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> VIBEZ ACCOUNT</div><h2 id="email-auth-title">Welcome to VIBEZ.</h2><p>Sign in securely with your Google account to share an event with the city.</p></div>
+            <button type="button" className="event-modal-close" onClick={() => setShowEmailAuth(false)} aria-label="Close">×</button>
           </div>
-          <form className="event-form email-auth-form" onSubmit={emailAuthStep === 'email' ? sendEmailCode : verifyEmailCode}>
-            {emailAuthStep === 'email' ? <label>Email address *<input required type="email" autoComplete="email" value={emailAuthEmail} onChange={(e) => setEmailAuthEmail(e.target.value)} placeholder="you@example.com" /></label> : <><label>6-digit code *<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength="6" maxLength="6" value={emailAuthCode} onChange={(e) => setEmailAuthCode(e.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="123456" /></label><button type="button" className="email-change-btn" onClick={() => { setEmailAuthStep('email'); setEmailAuthCode(''); setEmailAuthError(''); setEmailAuthMessage(''); }}>Change email address</button></>}
-            {emailAuthMessage && <p className="email-auth-message">{emailAuthMessage}</p>}
-            {emailAuthError && <p className="event-form-error">{emailAuthError}</p>}
-            <button className="event-form-submit" type="submit" disabled={emailAuthBusy}>{emailAuthBusy ? 'Please wait…' : emailAuthStep === 'email' ? 'Send verification code ↗' : 'Verify & continue ↗'}</button>
-          </form>
+          {emailAuthError && <p className="event-form-error">{emailAuthError}</p>}
+          <button type="button" className="event-form-submit" onClick={signInWithGoogle} disabled={emailAuthBusy}>
+            {emailAuthBusy ? 'Connecting to Google…' : 'Continue with Google ↗'}
+          </button>
+          <p className="email-auth-message">Your Google email is used for sign-in and event submission only.</p>
         </section>
       </div>}
       {showEventForm && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEventForm(false); }}>
