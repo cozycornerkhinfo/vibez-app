@@ -383,7 +383,7 @@ function App() {
         <section className="event-modal email-auth-modal" role="dialog" aria-modal="true" aria-labelledby="email-auth-title">
           <div className="event-modal-heading">
             <div><div className="eyebrow dark"><span className="eyebrow-dot" /> VIBEZ ACCOUNT</div><h2 id="email-auth-title">{emailAuthStep === 'email' ? 'Sign in with email.' : 'Check your inbox.'}</h2><p>{emailAuthStep === 'email' ? 'We’ll send you a one-time verification code.' : 'Enter the 6-digit code we sent to ' + emailAuthEmail}</p></div>
-            <button type="button" className="event-modal-close" onClick={() => setShowEmailAuth(false)} aria-label="Close">×</button>
+            <button type="button" className="event-modal-close" onClick={() => { setShowEmailAuth(false); setOpenFormAfterEmailLogin(false); }} aria-label="Close">×</button>
           </div>
           <form className="event-form email-auth-form" onSubmit={emailAuthStep === 'email' ? sendEmailCode : verifyEmailCode}>
             {emailAuthStep === 'email' ? <label>Email address *<input required type="email" autoComplete="email" value={emailAuthEmail} onChange={(e) => setEmailAuthEmail(e.target.value)} placeholder="you@example.com" /></label> : <><label>6-digit code *<input required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength="6" maxLength="6" value={emailAuthCode} onChange={(e) => setEmailAuthCode(e.target.value.replace(/\\D/g, '').slice(0, 6))} placeholder="123456" /></label><button type="button" className="email-change-btn" onClick={() => { setEmailAuthStep('email'); setEmailAuthCode(''); setEmailAuthError(''); setEmailAuthMessage(''); }}>Change email address</button></>}
@@ -417,9 +417,9 @@ function App() {
               </div>}
             </div>}
             {telegramStatus !== 'connected' && <p className="field-hint">Voucher offers are currently available to Telegram-verified organizers only.</p>}
-            <div className="event-form-row"><label>Organizer name<input maxLength="120" name="organizer_name" value={eventForm.organizer_name} onChange={(e) => setEventForm({...eventForm,organizer_name:e.target.value})} placeholder="Your name or organization" /></label><label>Telegram contact (recommended) <span className="field-hint">Enter your Telegram username, e.g. @yourusername, so visitors can message you directly.</span><input maxLength="120" name="organizer_contact" value={eventForm.organizer_contact} onChange={(e) => setEventForm({...eventForm,organizer_contact:e.target.value})} placeholder="@yourusername" /></label></div>
+            <div className="event-form-row"><label>Organizer name<input maxLength="120" name="organizer_name" value={eventForm.organizer_name} onChange={(e) => setEventForm({...eventForm,organizer_name:e.target.value})} placeholder="Your name or organization" /></label><label>Organizer contact <span className="field-hint">Optional — a Telegram username such as @yourusername helps visitors contact you directly.</span><input maxLength="120" name="organizer_contact" value={eventForm.organizer_contact} onChange={(e) => setEventForm({...eventForm,organizer_contact:e.target.value})} placeholder="@yourusername" /></label></div>
             {eventError && <p className="event-form-error">{eventError}</p>}
-            <p className="event-review-note">Your event will be reviewed by VIBEZ before appearing publicly. {telegramStatus === 'connected' ? 'Your Telegram account' : 'Your verified email account'} is attached automatically.</p>
+            <p className="event-review-note">Your event will be reviewed by VIBEZ before appearing publicly. {telegramStatus === 'connected' ? 'Your Telegram account' : 'Your verified email account (not shown publicly)'} is attached automatically.</p>
             <button className="event-form-submit" type="submit" disabled={eventSubmitting}>{eventSubmitting ? 'Submitting…' : 'Submit event for review ↗'}</button>
           </form>}
         </section>
