@@ -47,6 +47,10 @@ function App() {
   const [voucherMessage, setVoucherMessage] = useState('');
   const [voucherError, setVoucherError] = useState('');
   const [redeemCode, setRedeemCode] = useState('');
+  const [adminEvents, setAdminEvents] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState('');
+  const isVibezAdmin = String(telegramUser?.id || '') === '8357239676' || String(emailUser?.email || '').toLowerCase() === 'vibeztoconnect@gmail.com';
   useEffect(() => { window.localStorage.setItem('vibez-city', selectedCity); }, [selectedCity]);
   useEffect(() => {
     let active = true;
@@ -199,6 +203,39 @@ function App() {
     await supabase.auth.signOut();
     setEmailUser(null);
   };
+  const adminRequest = async (action, eventId = '') => {
+    const isTelegramAdmin = String(telegramUser?.id || '') === '8357239676' && telegramInitData;
+    const headers = { 'Content-Type': 'application/json' };
+    const body = { action, ...(isTelegramAdmin ? { initData: telegramInitData } : {}) };
+    if (!isTelegramAdmin) {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!data.session?.access_token) throw new Error('Please sign in with the VIBEZ admin Google account.');
+      headers.Authorization = 'Bearer ' + data.session.access_token;
+    }
+    if (eventId) body.eventId = eventId;
+    const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-admin-events', {
+      method: 'POST', headers, body: JSON.stringify(body),
+    });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Admin request failed.');
+    return result;
+  };
+  const loadAdminEvents = async () => {
+    setAdminLoading(true); setAdminError('');
+    try { const result = await adminRequest('list'); setAdminEvents(result.events || []); }
+    catch (error) { setAdminError(error.message || 'Could not load events.'); }
+    finally { setAdminLoading(false); }
+  };
+  const deleteAdminEvent = async (event) => {
+    if (!window.confirm('Delete "' + event.title + '" permanently? This also removes its voucher records.')) return;
+    setAdminError('');
+    try {
+      await adminRequest('delete', event.id);
+      setAdminEvents(current => current.filter(item => item.id !== event.id));
+      setActivities(current => current.filter(item => item.id !== event.id));
+    } catch (error) { setAdminError(error.message || 'Could not delete event.'); }
+  };
   const openEventForm = () => {
     setEventError(''); setEventSuccess('');
     if (telegramStatus === 'connected' || emailUser) {
@@ -320,8 +357,8 @@ function App() {
           <span className="brand-name">VIBEZ</span>
         </a>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
-          {['Discover', 'Events', 'Community', 'Saved', 'My Vouchers'].map((tab) => (
-            <button key={tab} className={activeTab === tab ? 'nav-link active' : 'nav-link'} onClick={() => { setActiveTab(tab); setMobileMenu(false); }}>
+          {['Discover', 'Events', 'Community', 'Saved', 'My Vouchers', ...(isVibezAdmin ? ['Admin'] : [])].map((tab) => (
+            <button key={tab} className={activeTab === tab ? 'nav-link active' : 'nav-link'} onClick={() => { setActiveTab(tab); setMobileMenu(false); if (tab === 'Admin') loadAdminEvents(); }}>
               {tab}{tab === 'Saved' && saved.length > 0 && <span className="saved-count">{saved.length}</span>}{tab === 'My Vouchers' && myVouchers.length > 0 && <span className="saved-count">{myVouchers.length}</span>}
             </button>
           ))}
@@ -410,6 +447,21 @@ function App() {
         </section>
       </div>}
       <main>
+        {activeTab === 'Admin' && isVibezAdmin && <section className="discover-section admin-events-panel">
+          <div className="section-heading">
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> VIBEZ CONTROL ROOM</div><h2>Manage events.</h2><p>All submitted events across Phnom Penh and Yangon, including old listings.</p></div>
+            <button type="button" className="filter-btn" onClick={loadAdminEvents} disabled={adminLoading}>{adminLoading ? 'Loading…' : '↻ Refresh'}</button>
+          </div>
+          {adminError && <p className="event-form-error">{adminError}</p>}
+          {adminLoading && <p>Loading all events…</p>}
+          {!adminLoading && adminEvents.length === 0 && !adminError && <p>No submitted events found.</p>}
+          <div className="admin-event-list">
+            {adminEvents.map(event => <article className="admin-event-row" key={event.id}>
+              <div className="admin-event-main"><strong>{event.title}</strong><span>{event.city} · {event.category} · {event.event_date} · {event.status}</span><small>Organizer: {event.organizer_name || 'Not provided'} · Submitted {new Date(event.created_at).toLocaleDateString()}</small></div>
+              <button type="button" className="admin-delete-btn" onClick={() => deleteAdminEvent(event)}>Delete</button>
+            </article>)}
+          </div>
+        </section>}
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span className="eyebrow-dot" /> YOUR CITY, YOUR SCENE</div>
