@@ -126,13 +126,14 @@ export default function HiddenGemForm({ open, onClose, selectedCity, telegramIni
             <label>Google Maps share link <span className="field-hint">Optional — helps people find the exact pin.</span>
               <input type="url" maxLength="1000" value={form.map_url} onChange={event => update('map_url', event.target.value)} placeholder="https://maps.app.goo.gl/..." />
             </label>
-            <label>Photos * <span className="field-hint">Add 1–4 real photos. JPG, PNG or WebP · max 5 MB each.</span>
-              <input required type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setPhotos(Array.from(event.target.files || []).slice(0, 4))} />
+            <label>Photos * <span className="field-hint">Add 3–5 real photos. JPG, PNG or WebP · max 5 MB each.</span>
+              <input required type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={event => setPhotos(Array.from(event.target.files || []))} />
             </label>
             {photos.length > 0 && <p className="gem-photo-count">{photos.length} photo{photos.length === 1 ? '' : 's'} selected: {photos.map(photo => photo.name).join(', ')}</p>}
+            {photos.length > 0 && (photos.length < 3 || photos.length > 5) && <p className="event-form-error">Please select between 3 and 5 photos.</p>}
             {error && <p className="event-form-error">{error}</p>}
             <p className="event-review-note">Your submission will be reviewed by VIBEZ before it appears publicly. Your account is attached automatically and won't be shown on the public listing.</p>
-            <button className="event-form-submit" type="submit" disabled={submitting || photos.length < 1 || photos.length > 4}>
+            <button className="event-form-submit" type="submit" disabled={submitting || photos.length < 3 || photos.length > 5}>
               {submitting ? 'Submitting…' : 'Submit hidden gem for review ↗'}
             </button>
           </form>
