@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import HiddenGemForm from './HiddenGemForm';
 
 const categories = ['All vibes', 'Music', 'Markets', 'Food & Drink', 'Arts', 'Fitness', 'Community'];
 
@@ -28,6 +29,7 @@ function App() {
   const [eventsError, setEventsError] = useState('');
   const [telegramInitData, setTelegramInitData] = useState('');
   const [showEventForm, setShowEventForm] = useState(false);
+  const [showGemForm, setShowGemForm] = useState(false);
   const [eventImage, setEventImage] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -60,6 +62,11 @@ function App() {
         window.sessionStorage.removeItem('vibez-open-event-after-auth');
         setEventForm(current => ({ ...current, city: selectedCity }));
         setShowEventForm(true);
+        setShowEmailAuth(false);
+      }
+      if (session?.user && window.sessionStorage.getItem('vibez-open-gem-after-auth') === '1') {
+        window.sessionStorage.removeItem('vibez-open-gem-after-auth');
+        setShowGemForm(true);
         setShowEmailAuth(false);
       }
     };
@@ -248,6 +255,17 @@ function App() {
     setEmailAuthMessage('');
     setShowEmailAuth(true);
   };
+  const openGemForm = () => {
+    if (telegramStatus === 'connected' || emailUser) {
+      setShowGemForm(true);
+      return;
+    }
+    window.sessionStorage.setItem('vibez-open-gem-after-auth', '1');
+    setEmailAuthError('');
+    setEmailAuthMessage('');
+    setShowEmailAuth(true);
+  };
+
   const claimVoucher = async (eventId) => {
     if (!telegramInitData || telegramStatus !== 'connected') { setVoucherError('Open VIBEZ from Telegram to claim a voucher.'); return; }
     setVoucherBusy(true); setVoucherError(''); setVoucherMessage('');
@@ -402,6 +420,13 @@ function App() {
         <button type="button" className="image-lightbox-close" onClick={() => setSelectedImage(null)} aria-label="Close image">×</button>
         <img src={selectedImage.src} alt={selectedImage.alt} onClick={(e) => e.stopPropagation()} />
       </div>}
+      <HiddenGemForm
+        open={showGemForm}
+        onClose={() => setShowGemForm(false)}
+        selectedCity={selectedCity}
+        telegramInitData={telegramInitData}
+        telegramStatus={telegramStatus}
+      />
       {showEmailAuth && <div className="event-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowEmailAuth(false); }}>
         <section className="event-modal email-auth-modal" role="dialog" aria-modal="true" aria-labelledby="email-auth-title">
           <div className="event-modal-heading">
@@ -537,7 +562,7 @@ function App() {
           </>}
         </section>
 
-        <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event, a hidden spot or a community worth finding? Help make the city more discoverable.</p></div><button onClick={openEventForm}>Share a discovery <ArrowUpRight size={17} /></button><span className="banner-star">✳</span></section>
+        <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event or a hidden spot? Help make the city more discoverable.</p></div><div className="community-banner-actions"><button onClick={openEventForm}>Share an event <ArrowUpRight size={17} /></button><button className="gem-submit-btn" onClick={openGemForm}>Add a hidden gem <MapPin size={16} /></button></div><span className="banner-star">✳</span></section>
       </main>
       <footer><a className="brand footer-brand" href="#"><span className="brand-name">VIBEZ</span></a><span>BE OUT THERE. FIND YOUR PEOPLE.</span><span>© 2026 VIBEZ</span></footer>
     </div>
