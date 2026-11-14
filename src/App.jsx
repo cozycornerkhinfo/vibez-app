@@ -57,6 +57,12 @@ function App() {
   const [adminEvents, setAdminEvents] = useState([]);
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminError, setAdminError] = useState('');
+  const [adminGems, setAdminGems] = useState([]);
+  const [adminGemsLoading, setAdminGemsLoading] = useState(false);
+  const [adminGemsError, setAdminGemsError] = useState('');
+  const [editingGem, setEditingGem] = useState(null);
+  const [gemEditPhotos, setGemEditPhotos] = useState([]);
+  const [gemEditSaving, setGemEditSaving] = useState(false);
   const isVibezAdmin = String(telegramUser?.id || '') === '8357239676' || String(emailUser?.email || '').toLowerCase() === 'vibeztoconnect@gmail.com';
   useEffect(() => { window.localStorage.setItem('vibez-city', selectedCity); }, [selectedCity]);
   useEffect(() => {
@@ -267,6 +273,66 @@ function App() {
       setActivities(current => current.filter(item => item.id !== event.id));
     } catch (error) { setAdminError(error.message || 'Could not delete event.'); }
   };
+  const adminGemRequest = async (action, payload = {}, photos = []) => {
+    const isTelegramAdmin = String(telegramUser?.id || '') === '8357239676' && telegramInitData;
+    const headers = {};
+    let body;
+    if (photos.length || action === 'update') {
+      body = new FormData();
+      body.append('action', action);
+      if (isTelegramAdmin) body.append('initData', telegramInitData);
+      Object.entries(payload).forEach(([key, value]) => body.append(key, String(value ?? '')));
+      photos.forEach(photo => body.append('photos', photo));
+    } else {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({ action, ...payload, ...(isTelegramAdmin ? { initData: telegramInitData } : {}) });
+    }
+    if (!isTelegramAdmin) {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (!data.session?.access_token) throw new Error('Please sign in with the VIBEZ admin Google account.');
+      headers.Authorization = 'Bearer ' + data.session.access_token;
+    }
+    const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-admin-gems', { method: 'POST', headers, body });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Hidden Gem admin request failed.');
+    return result;
+  };
+  const loadAdminGems = async () => {
+    setAdminGemsLoading(true); setAdminGemsError('');
+    try { const result = await adminGemRequest('list'); setAdminGems(result.gems || []); }
+    catch (error) { setAdminGemsError(error.message || 'Could not load hidden gems.'); }
+    finally { setAdminGemsLoading(false); }
+  };
+  const startEditGem = (gem) => {
+    setEditingGem({ id: gem.id, name: gem.name || '', description: gem.description || '', category: gem.category || 'Other', city: gem.city || 'Phnom Penh', location: gem.location || '', map_url: gem.map_url || '', status: gem.status || 'approved' });
+    setGemEditPhotos([]); setAdminGemsError('');
+  };
+  const saveAdminGem = async (event) => {
+    event.preventDefault();
+    if (!editingGem) return;
+    if (gemEditPhotos.length > 0 && (gemEditPhotos.length < 3 || gemEditPhotos.length > 5)) { setAdminGemsError('If replacing photos, please select 3–5 photos.'); return; }
+    setGemEditSaving(true); setAdminGemsError('');
+    try {
+      await adminGemRequest('update', { ...editingGem, gemId: editingGem.id }, gemEditPhotos);
+      setEditingGem(null); setGemEditPhotos([]);
+      await loadAdminGems();
+      const response = await fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-public-gems?city=' + encodeURIComponent(selectedCity));
+      const result = await response.json();
+      if (response.ok && result.ok) setHiddenGems(result.gems || []);
+    } catch (error) { setAdminGemsError(error.message || 'Could not update hidden gem.'); }
+    finally { setGemEditSaving(false); }
+  };
+  const deleteAdminGem = async (gem) => {
+    if (!window.confirm('Permanently delete "' + gem.name + '" and all of its photos? This cannot be undone.')) return;
+    setAdminGemsError('');
+    try {
+      await adminGemRequest('delete', { gemId: gem.id });
+      setAdminGems(current => current.filter(item => item.id !== gem.id));
+      setHiddenGems(current => current.filter(item => item.id !== gem.id));
+      if (selectedGem?.id === gem.id) setSelectedGem(null);
+    } catch (error) { setAdminGemsError(error.message || 'Could not delete hidden gem.'); }
+  };
   const openEventForm = () => {
     setEventError(''); setEventSuccess('');
     if (telegramStatus === 'connected' || emailUser) {
@@ -400,7 +466,7 @@ function App() {
         </a>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
           {['Discover', 'Events', 'Community', 'Saved', 'My Vouchers', ...(isVibezAdmin ? ['Admin'] : [])].map((tab) => (
-            <button key={tab} className={activeTab === tab ? 'nav-link active' : 'nav-link'} onClick={() => { setActiveTab(tab); setMobileMenu(false); if (tab === 'Admin') loadAdminEvents(); }}>
+            <button key={tab} className={activeTab === tab ? 'nav-link active' : 'nav-link'} onClick={() => { setActiveTab(tab); setMobileMenu(false); if (tab === 'Admin') { loadAdminEvents(); loadAdminGems(); } }}>
               {tab}{tab === 'Saved' && saved.length > 0 && <span className="saved-count">{saved.length}</span>}{tab === 'My Vouchers' && myVouchers.length > 0 && <span className="saved-count">{myVouchers.length}</span>}
             </button>
           ))}
@@ -511,6 +577,22 @@ function App() {
             </article>)}
           </div>
         </section>}
+        {activeTab === 'Admin' && isVibezAdmin && <section className="discover-section admin-events-panel admin-gems-panel">
+          <div className="section-heading">
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY DISCOVERIES</div><h2>Manage Hidden Gems.</h2><p>Edit details, change approval status, replace photos or remove a listing.</p></div>
+            <button type="button" className="filter-btn" onClick={loadAdminGems} disabled={adminGemsLoading}>{adminGemsLoading ? 'Loading…' : '↻ Refresh'}</button>
+          </div>
+          {adminGemsError && <p className="event-form-error">{adminGemsError}</p>}
+          {adminGemsLoading && <p className="admin-gem-empty">Loading hidden gems…</p>}
+          {!adminGemsLoading && adminGems.length === 0 && !adminGemsError && <p className="admin-gem-empty">No hidden gem submissions found.</p>}
+          <div className="admin-gem-list">
+            {adminGems.map(gem => <article className="admin-gem-row" key={gem.id}>
+              {gem.photo_urls?.[0] ? <img src={gem.photo_urls[0]} alt="" /> : <div className="admin-gem-no-photo">✳</div>}
+              <div className="admin-event-main"><strong>{gem.name}</strong><span>{gem.city} · {gem.category} · {gem.status?.toUpperCase()}</span><small>{gem.location} · {gem.photo_paths?.length || gem.photo_urls?.length || 0} photos · Submitted {new Date(gem.created_at).toLocaleDateString()}</small></div>
+              <div className="admin-gem-actions"><button type="button" className="admin-gem-edit-btn" onClick={() => startEditGem(gem)}>Edit</button><button type="button" className="admin-delete-btn" onClick={() => deleteAdminGem(gem)}>Delete</button></div>
+            </article>)}
+          </div>
+        </section>}
         <section className="hero">
           <div className="hero-copy">
             <div className="eyebrow"><span className="eyebrow-dot" /> YOUR CITY, YOUR SCENE</div>
@@ -614,6 +696,27 @@ function App() {
         <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event or a hidden spot? Help make the city more discoverable.</p></div><div className="community-banner-actions"><button onClick={openEventForm}>Share an event <ArrowUpRight size={17} /></button><button className="gem-submit-btn" onClick={openGemForm}>Add a hidden gem <MapPin size={16} /></button></div><span className="banner-star">✳</span></section>
       </main>
       <footer><a className="brand footer-brand" href="#"><span className="brand-name">VIBEZ</span></a><span>BE OUT THERE. FIND YOUR PEOPLE.</span><span>© 2026 VIBEZ</span></footer>
+      {editingGem && <div className="gem-detail-backdrop admin-gem-edit-backdrop">
+        <section className="gem-detail-modal admin-gem-edit-modal" role="dialog" aria-modal="true" aria-label="Edit hidden gem">
+          <button type="button" className="gem-detail-close" onClick={() => { if (!gemEditSaving) setEditingGem(null); }} aria-label="Close">×</button>
+          <form className="admin-gem-edit-form" onSubmit={saveAdminGem}>
+            <div className="eyebrow dark">VIBEZ CONTROL ROOM</div><h2>Edit Hidden Gem</h2>
+            <label>Place name<input required minLength="2" maxLength="120" value={editingGem.name} onChange={e => setEditingGem({...editingGem,name:e.target.value})} /></label>
+            <label>Description<textarea required minLength="10" maxLength="1000" rows="4" value={editingGem.description} onChange={e => setEditingGem({...editingGem,description:e.target.value})} /></label>
+            <div className="admin-gem-edit-row">
+              <label>Category<select value={editingGem.category} onChange={e => setEditingGem({...editingGem,category:e.target.value})}>{['Cafe & Coffee','Food & Drink','Nature & Outdoors','Art & Culture','Shopping','Activities','Hidden Spots','Other'].map(value => <option key={value}>{value}</option>)}</select></label>
+              <label>City<select value={editingGem.city} onChange={e => setEditingGem({...editingGem,city:e.target.value})}><option>Phnom Penh</option><option>Yangon</option></select></label>
+            </div>
+            <label>Location / address<input required minLength="2" maxLength="250" value={editingGem.location} onChange={e => setEditingGem({...editingGem,location:e.target.value})} /></label>
+            <label>Google Maps link<input type="url" maxLength="1000" value={editingGem.map_url} onChange={e => setEditingGem({...editingGem,map_url:e.target.value})} placeholder="https://maps.app.goo.gl/..." /></label>
+            <label>Listing status<select value={editingGem.status} onChange={e => setEditingGem({...editingGem,status:e.target.value})}><option value="pending">Pending review</option><option value="approved">Approved / public</option><option value="rejected">Rejected / hidden</option></select></label>
+            <label>Replace photos <span className="field-hint">Optional. Keep existing photos by leaving this empty. If replacing, upload 3–5 photos (JPG, PNG or WebP, max 5 MB each).</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => setGemEditPhotos(Array.from(e.target.files || []))} /></label>
+            {gemEditPhotos.length > 0 && <p className="gem-photo-count">{gemEditPhotos.length} replacement photo(s) selected.</p>}
+            {gemEditPhotos.length > 0 && (gemEditPhotos.length < 3 || gemEditPhotos.length > 5) && <p className="event-form-error">Please select 3–5 photos.</p>}
+            <div className="admin-gem-edit-actions"><button type="button" className="filter-btn" onClick={() => setEditingGem(null)} disabled={gemEditSaving}>Cancel</button><button type="submit" className="event-form-submit" disabled={gemEditSaving || (gemEditPhotos.length > 0 && (gemEditPhotos.length < 3 || gemEditPhotos.length > 5))}>{gemEditSaving ? 'Saving…' : 'Save changes ↗'}</button></div>
+          </form>
+        </section>
+      </div>}
       {selectedGem && <div className="gem-detail-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setSelectedGem(null); }}>
         <section className="gem-detail-modal" role="dialog" aria-modal="true" aria-label={selectedGem.name + ' hidden gem details'}>
           <button type="button" className="gem-detail-close" onClick={() => setSelectedGem(null)} aria-label="Close">×</button>
