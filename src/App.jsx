@@ -586,7 +586,7 @@ function App() {
 
         {activeTab !== 'Saved' && activeTab !== 'My Vouchers' && activeTab !== 'Admin' && <section className="discover-section hidden-gems-section">
           <div className="section-heading">
-            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY DISCOVERIES</div><h2>Hidden Gems in {selectedCity}.</h2><p>Local spots worth finding. Shared by people who know the city.</p></div>
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY DISCOVERIES</div><h2>Hidden Gems.</h2><p>Local spots worth finding. Shared by people who know the city.</p></div>
             <span className="happening-count">{hiddenGems.length} {hiddenGems.length === 1 ? 'GEM' : 'GEMS'}</span>
           </div>
           {gemsLoading && <p className="gem-loading">Finding hidden gems in {selectedCity}…</p>}
