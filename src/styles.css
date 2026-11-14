@@ -301,3 +301,29 @@ footer{border-color:#ffffff1c;color:#8f9b90}
   .community-banner-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}
   .community-banner-actions>button{justify-content:center;white-space:normal}
 }
+
+
+/* Community-submitted Hidden Gems */
+.hidden-gems-section{padding-top:38px}
+.hidden-gem-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.hidden-gem-card{overflow:hidden;border:1px solid #dfe5d9;border-radius:12px;background:#fff;box-shadow:0 8px 24px rgba(30,48,32,.06)}
+.hidden-gem-photo{position:relative;aspect-ratio:16/10;background:#e8eee4;display:grid;place-items:center;overflow:hidden}
+.hidden-gem-photo>img{width:100%;height:100%;object-fit:cover;display:block}
+.hidden-gem-photo>span:first-child{font-size:42px;color:#8da18b}
+.hidden-gem-approved{position:absolute;left:12px;top:12px;padding:6px 9px;border-radius:20px;background:#b8ff55;color:#111713;font-size:8px;font-weight:900;letter-spacing:.8px}
+.hidden-gem-info{display:grid;gap:9px;padding:16px}
+.hidden-gem-category{color:#70806e;font-size:9px;font-weight:800;letter-spacing:.8px;text-transform:uppercase}
+.hidden-gem-category span{padding:0 3px;color:#b8ff55}
+.hidden-gem-info h3{margin:0;color:#26352a;font:700 20px 'Space Grotesk',sans-serif;letter-spacing:-.4px}
+.hidden-gem-info>p{margin:0;color:#647064;font-size:12px;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hidden-gem-location{display:flex;align-items:flex-start;gap:7px;color:#536451;font-size:10px;line-height:1.5}
+.hidden-gem-location svg{flex:0 0 auto;color:#6b9d50}
+.hidden-gem-map-btn{justify-self:start;display:flex;align-items:center;gap:7px;margin-top:3px;padding:9px 12px;border:0;border-radius:6px;background:#26352a;color:#b8ff55;font-size:10px;font-weight:800;cursor:pointer}
+.gem-loading{color:#667466;font-size:12px}
+.gem-empty{text-align:center;padding:28px 15px;border:1px dashed #d2ddce;border-radius:10px;background:#f8fbf6}
+.gem-empty>span{color:#83a36e;font-size:24px}
+.gem-empty h3{margin:8px 0;color:#26352a;font:700 18px 'Space Grotesk'}
+.gem-empty p{margin:0 0 13px;color:#718070;font-size:11px}
+.gem-empty button{border:0;border-radius:6px;background:#b8ff55;color:#111713;padding:10px 14px;font-size:10px;font-weight:900;cursor:pointer}
+@media(max-width:900px){.hidden-gem-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.hidden-gem-grid{grid-template-columns:1fr}.hidden-gem-info{padding:14px}.hidden-gem-info h3{font-size:18px}}
