@@ -27,6 +27,9 @@ function App() {
   const [activities, setActivities] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [eventsError, setEventsError] = useState('');
+  const [hiddenGems, setHiddenGems] = useState([]);
+  const [gemsLoading, setGemsLoading] = useState(true);
+  const [gemsError, setGemsError] = useState('');
   const [telegramInitData, setTelegramInitData] = useState('');
   const [showEventForm, setShowEventForm] = useState(false);
   const [showGemForm, setShowGemForm] = useState(false);
@@ -174,6 +177,25 @@ function App() {
       })
       .finally(() => {
         if (!cancelled) setEventsLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedCity]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setGemsLoading(true);
+    setGemsError('');
+    fetch('https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-public-gems?city=' + encodeURIComponent(selectedCity))
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.ok) throw new Error(result.error || 'Could not load hidden gems');
+        if (!cancelled) setHiddenGems(result.gems || []);
+      })
+      .catch((error) => {
+        if (!cancelled) setGemsError(error.message || 'Could not load hidden gems');
+      })
+      .finally(() => {
+        if (!cancelled) setGemsLoading(false);
       });
     return () => { cancelled = true; };
   }, [selectedCity]);
@@ -562,6 +584,30 @@ function App() {
           </>}
         </section>
 
+        {activeTab !== 'Saved' && activeTab !== 'My Vouchers' && activeTab !== 'Admin' && <section className="discover-section hidden-gems-section">
+          <div className="section-heading">
+            <div><div className="eyebrow dark"><span className="eyebrow-dot" /> COMMUNITY DISCOVERIES</div><h2>Hidden Gems in {selectedCity}.</h2><p>Local spots worth finding. Shared by people who know the city.</p></div>
+            <span className="happening-count">{hiddenGems.length} {hiddenGems.length === 1 ? 'GEM' : 'GEMS'}</span>
+          </div>
+          {gemsLoading && <p className="gem-loading">Finding hidden gems in {selectedCity}…</p>}
+          {gemsError && <div className="demo-note">{gemsError}. Please refresh to try again.</div>}
+          {!gemsLoading && !gemsError && hiddenGems.length > 0 && <div className="hidden-gem-grid">
+            {hiddenGems.map((gem) => <article className="hidden-gem-card" key={gem.id}>
+              <div className="hidden-gem-photo">
+                {gem.photo_urls?.[0] ? <img src={gem.photo_urls[0]} alt={gem.name} loading="lazy" /> : <span>✳</span>}
+                <span className="hidden-gem-approved">VIBEZ APPROVED</span>
+              </div>
+              <div className="hidden-gem-info">
+                <div className="hidden-gem-category">{gem.category} <span>·</span> {gem.city}</div>
+                <h3>{gem.name}</h3>
+                <p>{gem.description}</p>
+                <div className="hidden-gem-location"><MapPin size={14} /> {gem.location}</div>
+                <button type="button" className="hidden-gem-map-btn" onClick={() => openMap(gem.location, gem.map_url || '')}>Find this spot <ArrowUpRight size={15} /></button>
+              </div>
+            </article>)}
+          </div>}
+          {!gemsLoading && !gemsError && hiddenGems.length === 0 && <div className="gem-empty"><span>✳</span><h3>No hidden gems here just yet.</h3><p>Know a place worth sharing? Be the first to add one.</p><button type="button" onClick={openGemForm}>Add a hidden gem ↗</button></div>}
+        </section>}
         <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event or a hidden spot? Help make the city more discoverable.</p></div><div className="community-banner-actions"><button onClick={openEventForm}>Share an event <ArrowUpRight size={17} /></button><button className="gem-submit-btn" onClick={openGemForm}>Add a hidden gem <MapPin size={16} /></button></div><span className="banner-star">✳</span></section>
       </main>
       <footer><a className="brand footer-brand" href="#"><span className="brand-name">VIBEZ</span></a><span>BE OUT THERE. FIND YOUR PEOPLE.</span><span>© 2026 VIBEZ</span></footer>
