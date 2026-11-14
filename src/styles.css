@@ -369,3 +369,29 @@ footer{border-color:#ffffff1c;color:#8f9b90}
  .gem-detail-content{padding:17px}
  .gem-detail-content h2{font-size:22px}
 }
+
+
+/* Admin Hidden Gems management */
+.admin-gems-panel{padding-top:24px}
+.admin-gem-list{display:grid;gap:10px;margin-top:18px}
+.admin-gem-row{display:flex;align-items:center;gap:13px;padding:12px;border:1px solid #ffffff20;border-radius:10px;background:#1b241e}
+.admin-gem-row>img,.admin-gem-no-photo{width:76px;height:66px;flex:0 0 76px;border-radius:7px;object-fit:cover;background:#26332a}
+.admin-gem-no-photo{display:grid;place-items:center;color:#b8ff55;font-size:26px}
+.admin-gem-row .admin-event-main{flex:1}
+.admin-gem-row .admin-event-main strong{color:#f5f3ea}
+.admin-gem-row .admin-event-main span,.admin-gem-row .admin-event-main small{color:#aab6aa}
+.admin-gem-actions{display:flex;gap:7px;flex:0 0 auto}
+.admin-gem-edit-btn{border:1px solid #b8ff5570;background:#b8ff5518;color:#b8ff55;border-radius:7px;padding:9px 13px;font-size:11px;font-weight:800;cursor:pointer}
+.admin-gem-edit-btn:hover{background:#b8ff5530}
+.admin-gem-empty{color:#aab6aa}
+.admin-gem-edit-modal{width:min(620px,100%)}
+.admin-gem-edit-form{display:grid;gap:12px;padding:24px}
+.admin-gem-edit-form h2{margin:0 0 5px;color:#f5f3ea;font:700 25px 'Space Grotesk',sans-serif}
+.admin-gem-edit-form label{display:grid;gap:6px;color:#dce5dc;font-size:11px;font-weight:700}
+.admin-gem-edit-form input,.admin-gem-edit-form textarea,.admin-gem-edit-form select{width:100%;border:1px solid #ffffff26;border-radius:7px;background:#101813;color:#f5f3ea;padding:11px 12px;font:inherit;font-size:12px;outline:none}
+.admin-gem-edit-form input:focus,.admin-gem-edit-form textarea:focus,.admin-gem-edit-form select:focus{border-color:#b8ff55}
+.admin-gem-edit-form .field-hint{display:block;color:#aab6aa;font-weight:400;line-height:1.5}
+.admin-gem-edit-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.admin-gem-edit-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:5px}
+.admin-gem-edit-actions .event-form-submit{margin:0}
+@media(max-width:600px){.admin-gem-row{align-items:flex-start;flex-wrap:wrap}.admin-gem-row .admin-event-main{min-width:calc(100% - 95px)}.admin-gem-actions{margin-left:89px}.admin-gem-edit-row{grid-template-columns:1fr}.admin-gem-edit-form{padding:19px}}
