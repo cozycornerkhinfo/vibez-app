@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from './lib/supabase';
 
 const GEM_CATEGORIES = [
@@ -25,6 +25,15 @@ export default function HiddenGemForm({ open, onClose, selectedCity, telegramIni
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setForm({ name: '', description: '', category: 'Hidden Spots', city: selectedCity || 'Phnom Penh', location: '', map_url: '' });
+      setPhotos([]);
+      setError('');
+      setSuccess('');
+    }
+  }, [open]);
 
   if (!open) return null;
 
