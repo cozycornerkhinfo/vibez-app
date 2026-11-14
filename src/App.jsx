@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X } from 'lucide-react';
+import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import HiddenGemForm from './HiddenGemForm';
 
@@ -36,6 +36,8 @@ function App() {
   const [eventImage, setEventImage] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedGem, setSelectedGem] = useState(null);
+  const [selectedGemPhotoIndex, setSelectedGemPhotoIndex] = useState(0);
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
@@ -592,7 +594,7 @@ function App() {
           {gemsLoading && <p className="gem-loading">Finding hidden gems in {selectedCity}…</p>}
           {gemsError && <div className="demo-note">{gemsError}. Please refresh to try again.</div>}
           {!gemsLoading && !gemsError && hiddenGems.length > 0 && <div className="hidden-gem-grid">
-            {hiddenGems.map((gem) => <article className="hidden-gem-card" key={gem.id}>
+            {hiddenGems.map((gem) => <article className="hidden-gem-card" key={gem.id} role="button" tabIndex={0} onClick={() => { setSelectedGem(gem); setSelectedGemPhotoIndex(0); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedGem(gem); setSelectedGemPhotoIndex(0); } }}>
               <div className="hidden-gem-photo">
                 {gem.photo_urls?.[0] ? <img src={gem.photo_urls[0]} alt={gem.name} loading="lazy" /> : <span>✳</span>}
                 <span className="hidden-gem-approved">VIBEZ APPROVED</span>
@@ -602,7 +604,8 @@ function App() {
                 <h3>{gem.name}</h3>
                 <p>{gem.description}</p>
                 <div className="hidden-gem-location"><MapPin size={14} /> {gem.location}</div>
-                <button type="button" className="hidden-gem-map-btn" onClick={() => openMap(gem.location, gem.map_url || '')}>Find this spot <ArrowUpRight size={15} /></button>
+                <button type="button" className="hidden-gem-map-btn" onClick={(event) => { event.stopPropagation(); openMap(gem.location, gem.map_url || ''); }}>Find this spot <ArrowUpRight size={15} /></button>
+                <span className="hidden-gem-view-hint">View photos & details ↗</span>
               </div>
             </article>)}
           </div>}
@@ -611,6 +614,29 @@ function App() {
         <section className="community-banner"><div className="community-icon"><Users size={25} /></div><div><div className="eyebrow">BUILT BY THE COMMUNITY</div><h2>Your city has a story.<br />Add to it.</h2><p>Know a cool event or a hidden spot? Help make the city more discoverable.</p></div><div className="community-banner-actions"><button onClick={openEventForm}>Share an event <ArrowUpRight size={17} /></button><button className="gem-submit-btn" onClick={openGemForm}>Add a hidden gem <MapPin size={16} /></button></div><span className="banner-star">✳</span></section>
       </main>
       <footer><a className="brand footer-brand" href="#"><span className="brand-name">VIBEZ</span></a><span>BE OUT THERE. FIND YOUR PEOPLE.</span><span>© 2026 VIBEZ</span></footer>
+      {selectedGem && <div className="gem-detail-backdrop" onClick={(event) => { if (event.target === event.currentTarget) setSelectedGem(null); }}>
+        <section className="gem-detail-modal" role="dialog" aria-modal="true" aria-label={selectedGem.name + ' hidden gem details'}>
+          <button type="button" className="gem-detail-close" onClick={() => setSelectedGem(null)} aria-label="Close">×</button>
+          <div className="gem-gallery">
+            {selectedGem.photo_urls?.length > 0 ? <img src={selectedGem.photo_urls[selectedGemPhotoIndex]} alt={selectedGem.name + ' photo ' + (selectedGemPhotoIndex + 1)} /> : <div className="gem-gallery-empty">✳</div>}
+            {selectedGem.photo_urls?.length > 1 && <>
+              <button type="button" className="gem-gallery-arrow prev" aria-label="Previous photo" onClick={() => setSelectedGemPhotoIndex(index => (index - 1 + selectedGem.photo_urls.length) % selectedGem.photo_urls.length)}><ChevronLeft size={22} /></button>
+              <button type="button" className="gem-gallery-arrow next" aria-label="Next photo" onClick={() => setSelectedGemPhotoIndex(index => (index + 1) % selectedGem.photo_urls.length)}><ChevronRight size={22} /></button>
+              <span className="gem-gallery-counter">{selectedGemPhotoIndex + 1} / {selectedGem.photo_urls.length}</span>
+            </>}
+          </div>
+          {selectedGem.photo_urls?.length > 1 && <div className="gem-gallery-thumbs">
+            {selectedGem.photo_urls.map((photo, index) => <button type="button" key={photo} className={index === selectedGemPhotoIndex ? 'active' : ''} onClick={() => setSelectedGemPhotoIndex(index)} aria-label={'Show photo ' + (index + 1)}><img src={photo} alt="" /></button>)}
+          </div>}
+          <div className="gem-detail-content">
+            <div className="hidden-gem-category">{selectedGem.category} <span>·</span> {selectedGem.city}</div>
+            <h2>{selectedGem.name}</h2>
+            <p>{selectedGem.description}</p>
+            <div className="hidden-gem-location"><MapPin size={15} /> {selectedGem.location}</div>
+            <button type="button" className="hidden-gem-map-btn" onClick={() => openMap(selectedGem.location, selectedGem.map_url || '')}>Find this spot <ArrowUpRight size={15} /></button>
+          </div>
+        </section>
+      </div>}
     </div>
   );
 }
