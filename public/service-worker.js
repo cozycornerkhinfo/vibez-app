@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vibez-pwa-v1';
+const CACHE_NAME = 'vibez-pwa-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/vibez-icon.svg'];
 
 self.addEventListener('install', (event) => {
@@ -24,10 +24,8 @@ self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
 
-  // Never cache API calls, Telegram requests, or non-GET requests.
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  // Keep the app shell fresh when online, but show the saved shell offline.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
@@ -43,7 +41,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache built assets and the app's install resources.
   if (url.pathname.startsWith('/assets/') ||
       url.pathname === '/manifest.webmanifest' ||
       url.pathname === '/vibez-icon.svg') {
@@ -56,7 +53,7 @@ self.addEventListener('fetch', (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
           return response;
-        });
+        })
       })
     );
   }
