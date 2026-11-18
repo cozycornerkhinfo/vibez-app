@@ -398,8 +398,27 @@ function App() {
     setGemInteractionBusy(current => ({ ...current, [key]: true }));
     setGemInteractionError('');
     try {
-      await gemInteractionRequest({ gemId: gem.id, action });
-      await refreshGemInteractions();
+      const result = await gemInteractionRequest({ gemId: gem.id, action });
+      if (action === 'like') {
+        setGemInteractions(current => ({
+          ...current,
+          [gem.id]: {
+            ...(current[gem.id] || { likes: 0, saves: 0, comment_count: 0, comments: [], liked: false, saved: false }),
+            liked: result.active,
+            likes: Math.max(0, (current[gem.id]?.likes || 0) + (result.active ? 1 : -1)),
+          },
+        }));
+      } else if (action === 'save') {
+        setGemInteractions(current => ({
+          ...current,
+          [gem.id]: {
+            ...(current[gem.id] || { likes: 0, saves: 0, comment_count: 0, comments: [], liked: false, saved: false }),
+            saved: result.active,
+            saves: Math.max(0, (current[gem.id]?.saves || 0) + (result.active ? 1 : -1)),
+          },
+        }));
+      }
+      refreshGemInteractions().catch(error => console.warn('Could not refresh gem interactions:', error));
     } catch (error) {
       setGemInteractionError(error.message || 'Could not update this gem.');
     } finally {
@@ -776,7 +795,7 @@ function App() {
                 <div className="hidden-gem-location"><MapPin size={14} /> {gem.location}</div>
                 <button type="button" className="hidden-gem-map-btn" onClick={(event) => { event.stopPropagation(); openMap(gem.location, gem.map_url || ''); }}>Find this spot <ArrowUpRight size={15} /></button>
                 <div className="gem-card-actions" onClick={event => event.stopPropagation()}>
-                  <button type="button" className={gemInteractions[gem.id]?.liked ? 'gem-action-btn active liked' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':like']} onClick={() => handleGemReaction(gem, 'like')} aria-label="Recommend this gem"><Heart size={16} fill={gemInteractions[gem.id]?.liked ? 'currentColor' : 'none'} /><span>{gemInteractions[gem.id]?.likes || 0}</span></button>
+                  <button type="button" className={gemInteractions[gem.id]?.liked ? 'gem-action-btn active liked' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':like']} onClick={() => handleGemReaction(gem, 'like')} aria-label="Recommend this gem"><Heart size={16} fill={gemInteractions[gem.id]?.liked ? 'currentColor' : 'none'} /><span>Recommend</span><b>{gemInteractions[gem.id]?.likes || 0}</b></button>
                   <button type="button" className="gem-action-btn" onClick={() => { setSelectedGem(gem); setSelectedGemPhotoIndex(0); setGemInteractionError(''); }} aria-label="View comments"><MessageCircle size={16} /><span>{gemInteractions[gem.id]?.comment_count || 0}</span></button>
                   <button type="button" className={gemInteractions[gem.id]?.saved ? 'gem-action-btn active saved' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':save']} onClick={() => handleGemReaction(gem, 'save')} aria-label="Save this gem"><Bookmark size={16} fill={gemInteractions[gem.id]?.saved ? 'currentColor' : 'none'} /><span>{gemInteractions[gem.id]?.saves || 0}</span></button>
                 </div>
