@@ -777,7 +777,7 @@ function App() {
                 <button type="button" className="hidden-gem-map-btn" onClick={(event) => { event.stopPropagation(); openMap(gem.location, gem.map_url || ''); }}>Find this spot <ArrowUpRight size={15} /></button>
                 <div className="gem-card-actions" onClick={event => event.stopPropagation()}>
                   <button type="button" className={gemInteractions[gem.id]?.liked ? 'gem-action-btn active liked' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':like']} onClick={() => handleGemReaction(gem, 'like')} aria-label="Recommend this gem"><Heart size={16} fill={gemInteractions[gem.id]?.liked ? 'currentColor' : 'none'} /><span>{gemInteractions[gem.id]?.likes || 0}</span></button>
-                  <button type="button" className="gem-action-btn" onClick={() => { setSelectedGem(gem); setSelectedGemPhotoIndex(0); setGemInteractionError(''); }} aria-label="View comments"><MessageCircle size={16} /><span>{gemInteractions[gem.id]?.comments?.length || 0}</span></button>
+                  <button type="button" className="gem-action-btn" onClick={() => { setSelectedGem(gem); setSelectedGemPhotoIndex(0); setGemInteractionError(''); }} aria-label="View comments"><MessageCircle size={16} /><span>{gemInteractions[gem.id]?.comment_count || 0}</span></button>
                   <button type="button" className={gemInteractions[gem.id]?.saved ? 'gem-action-btn active saved' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':save']} onClick={() => handleGemReaction(gem, 'save')} aria-label="Save this gem"><Bookmark size={16} fill={gemInteractions[gem.id]?.saved ? 'currentColor' : 'none'} /><span>{gemInteractions[gem.id]?.saves || 0}</span></button>
                 </div>
                 <span className="hidden-gem-view-hint">View photos & details ↗</span>
@@ -835,7 +835,7 @@ function App() {
               <button type="button" className={gemInteractions[selectedGem.id]?.saved ? 'gem-action-btn active saved' : 'gem-action-btn'} onClick={() => handleGemReaction(selectedGem, 'save')}><Bookmark size={17} fill={gemInteractions[selectedGem.id]?.saved ? 'currentColor' : 'none'} /> Save · {gemInteractions[selectedGem.id]?.saves || 0}</button>
             </div>
             <div className="gem-comments">
-              <h3>Community notes <span>{gemInteractions[selectedGem.id]?.comments?.length || 0}</span></h3>
+              <h3>Community notes <span>{gemInteractions[selectedGem.id]?.comment_count || 0}</span></h3>
               <div className="gem-comment-list">
                 {(gemInteractions[selectedGem.id]?.comments || []).length === 0 && <p className="gem-no-comments">Be the first to share your experience.</p>}
                 {(gemInteractions[selectedGem.id]?.comments || []).map(comment => <article className="gem-comment" key={comment.id}>
