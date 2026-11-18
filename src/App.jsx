@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MapPin, CalendarDays, Compass, Users, Bookmark, ArrowUpRight, SlidersHorizontal, Sparkles, Menu, X, ChevronLeft, ChevronRight, Heart, MessageCircle } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import HiddenGemForm from './HiddenGemForm';
 
@@ -38,6 +38,11 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedGem, setSelectedGem] = useState(null);
   const [selectedGemPhotoIndex, setSelectedGemPhotoIndex] = useState(0);
+  const [gemInteractions, setGemInteractions] = useState({});
+  const [gemInteractionBusy, setGemInteractionBusy] = useState({});
+  const [gemCommentDraft, setGemCommentDraft] = useState('');
+  const [gemCommentBusy, setGemCommentBusy] = useState(false);
+  const [gemInteractionError, setGemInteractionError] = useState('');
   const [eventSubmitting, setEventSubmitting] = useState(false);
   const [eventError, setEventError] = useState('');
   const [eventSuccess, setEventSuccess] = useState('');
@@ -208,6 +213,21 @@ function App() {
     return () => { cancelled = true; };
   }, [selectedCity]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!hiddenGems.length) { setGemInteractions({}); return; }
+    const load = async () => {
+      try {
+        const result = await gemInteractionRequest(null, hiddenGems.map(gem => gem.id));
+        if (!cancelled) setGemInteractions(result.interactions || {});
+      } catch (error) {
+        console.warn('Could not load gem interactions:', error);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [hiddenGems, telegramStatus, telegramInitData, emailUser?.id]);
+
   const filtered = useMemo(() => activities
     .filter((item) => {
       const matchesCategory = category === 'All vibes' || item.type === category || (category === 'Food & Drink' && item.type === 'Community');
@@ -344,6 +364,74 @@ function App() {
     setEmailAuthError('');
     setEmailAuthMessage('');
     setShowEmailAuth(true);
+  };
+  const gemInteractionRequest = async (payload, gemIds = []) => {
+    const headers = {};
+    if (telegramStatus === 'connected' && telegramInitData) headers['x-telegram-init-data'] = telegramInitData;
+    else {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      if (data.session?.access_token) headers.Authorization = 'Bearer ' + data.session.access_token;
+    }
+    const url = 'https://ofxuiupsnvgnzammngeg.supabase.co/functions/v1/vibez-gem-interactions';
+    const response = payload
+      ? await fetch(url, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      : await fetch(url + '?gemIds=' + encodeURIComponent(gemIds.join(',')), { headers });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || 'Gem interaction failed.');
+    return result;
+  };
+  const refreshGemInteractions = async () => {
+    if (!hiddenGems.length) return;
+    const result = await gemInteractionRequest(null, hiddenGems.map(gem => gem.id));
+    setGemInteractions(result.interactions || {});
+  };
+  const requireGemSignIn = () => {
+    setGemInteractionError('Please sign in with Telegram or Google to interact with Hidden Gems.');
+    setEmailAuthError('Sign in to recommend, comment on and save Hidden Gems.');
+    setEmailAuthMessage('');
+    setShowEmailAuth(true);
+  };
+  const handleGemReaction = async (gem, action) => {
+    if (telegramStatus !== 'connected' && !emailUser) { requireGemSignIn(); return; }
+    const key = gem.id + ':' + action;
+    setGemInteractionBusy(current => ({ ...current, [key]: true }));
+    setGemInteractionError('');
+    try {
+      await gemInteractionRequest({ gemId: gem.id, action });
+      await refreshGemInteractions();
+    } catch (error) {
+      setGemInteractionError(error.message || 'Could not update this gem.');
+    } finally {
+      setGemInteractionBusy(current => ({ ...current, [key]: false }));
+    }
+  };
+  const submitGemComment = async (event) => {
+    event.preventDefault();
+    if (!selectedGem) return;
+    if (telegramStatus !== 'connected' && !emailUser) { requireGemSignIn(); return; }
+    const body = gemCommentDraft.trim();
+    if (!body) return;
+    setGemCommentBusy(true);
+    setGemInteractionError('');
+    try {
+      await gemInteractionRequest({ gemId: selectedGem.id, action: 'comment', body });
+      setGemCommentDraft('');
+      await refreshGemInteractions();
+    } catch (error) {
+      setGemInteractionError(error.message || 'Could not post your comment.');
+    } finally {
+      setGemCommentBusy(false);
+    }
+  };
+  const deleteGemComment = async (commentId) => {
+    if (!selectedGem) return;
+    try {
+      await gemInteractionRequest({ gemId: selectedGem.id, action: 'delete_comment', commentId });
+      await refreshGemInteractions();
+    } catch (error) {
+      setGemInteractionError(error.message || 'Could not delete your comment.');
+    }
   };
   const openGemForm = () => {
     if (telegramStatus === 'connected' || emailUser) {
@@ -687,6 +775,11 @@ function App() {
                 <p>{gem.description}</p>
                 <div className="hidden-gem-location"><MapPin size={14} /> {gem.location}</div>
                 <button type="button" className="hidden-gem-map-btn" onClick={(event) => { event.stopPropagation(); openMap(gem.location, gem.map_url || ''); }}>Find this spot <ArrowUpRight size={15} /></button>
+                <div className="gem-card-actions" onClick={event => event.stopPropagation()}>
+                  <button type="button" className={gemInteractions[gem.id]?.liked ? 'gem-action-btn active liked' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':like']} onClick={() => handleGemReaction(gem, 'like')} aria-label="Recommend this gem"><Heart size={16} fill={gemInteractions[gem.id]?.liked ? 'currentColor' : 'none'} /><span>{gemInteractions[gem.id]?.likes || 0}</span></button>
+                  <button type="button" className="gem-action-btn" onClick={() => { setSelectedGem(gem); setSelectedGemPhotoIndex(0); setGemInteractionError(''); }} aria-label="View comments"><MessageCircle size={16} /><span>{gemInteractions[gem.id]?.comments?.length || 0}</span></button>
+                  <button type="button" className={gemInteractions[gem.id]?.saved ? 'gem-action-btn active saved' : 'gem-action-btn'} disabled={!!gemInteractionBusy[gem.id + ':save']} onClick={() => handleGemReaction(gem, 'save')} aria-label="Save this gem"><Bookmark size={16} fill={gemInteractions[gem.id]?.saved ? 'currentColor' : 'none'} /><span>{gemInteractions[gem.id]?.saves || 0}</span></button>
+                </div>
                 <span className="hidden-gem-view-hint">View photos & details ↗</span>
               </div>
             </article>)}
@@ -737,6 +830,27 @@ function App() {
             <p>{selectedGem.description}</p>
             <div className="hidden-gem-location"><MapPin size={15} /> {selectedGem.location}</div>
             <button type="button" className="hidden-gem-map-btn" onClick={() => openMap(selectedGem.location, selectedGem.map_url || '')}>Find this spot <ArrowUpRight size={15} /></button>
+            <div className="gem-detail-actions">
+              <button type="button" className={gemInteractions[selectedGem.id]?.liked ? 'gem-action-btn active liked' : 'gem-action-btn'} onClick={() => handleGemReaction(selectedGem, 'like')}><Heart size={17} fill={gemInteractions[selectedGem.id]?.liked ? 'currentColor' : 'none'} /> Recommend · {gemInteractions[selectedGem.id]?.likes || 0}</button>
+              <button type="button" className={gemInteractions[selectedGem.id]?.saved ? 'gem-action-btn active saved' : 'gem-action-btn'} onClick={() => handleGemReaction(selectedGem, 'save')}><Bookmark size={17} fill={gemInteractions[selectedGem.id]?.saved ? 'currentColor' : 'none'} /> Save · {gemInteractions[selectedGem.id]?.saves || 0}</button>
+            </div>
+            <div className="gem-comments">
+              <h3>Community notes <span>{gemInteractions[selectedGem.id]?.comments?.length || 0}</span></h3>
+              <div className="gem-comment-list">
+                {(gemInteractions[selectedGem.id]?.comments || []).length === 0 && <p className="gem-no-comments">Be the first to share your experience.</p>}
+                {(gemInteractions[selectedGem.id]?.comments || []).map(comment => <article className="gem-comment" key={comment.id}>
+                  <div><strong>{comment.display_name}</strong><time>{new Date(comment.created_at).toLocaleDateString()}</time></div>
+                  <p>{comment.body}</p>
+                  {comment.own && <button type="button" onClick={() => deleteGemComment(comment.id)}>Delete</button>}
+                </article>)}
+              </div>
+              <form className="gem-comment-form" onSubmit={submitGemComment}>
+                <input value={gemCommentDraft} onChange={event => setGemCommentDraft(event.target.value)} maxLength={500} placeholder="Share a tip or your experience…" />
+                <button type="submit" disabled={gemCommentBusy || !gemCommentDraft.trim()}>{gemCommentBusy ? 'Posting…' : 'Post'}</button>
+              </form>
+              {gemInteractionError && <p className="gem-interaction-error">{gemInteractionError}</p>}
+              <small>Sign in to join the conversation. Comments are limited to 5 per 10 minutes.</small>
+            </div>
           </div>
         </section>
       </div>}
